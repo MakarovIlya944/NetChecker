@@ -231,6 +231,7 @@ namespace NetCheckApp
 
 			public bool ConnectedСomponent()
 			{
+
 				return OutterThetra.Count == dfs(0);
 			}
 
