@@ -57,6 +57,7 @@ namespace NetCheckApp
 			public double eps = 1E-10;
 			public double FiguresValue = 0;
 			private bool[] VisitedVertecies;
+			private bool[] VisitedThetra;
 
 			private double Distance(Vec3 v, Vec3 u)
 			{
@@ -90,6 +91,7 @@ namespace NetCheckApp
 				string[] str_in = File.ReadAllLines("in.txt");
 				int n = Convert.ToInt32(str_in[0]), i = 1;
 				VisitedVertecies = new bool[n];
+				
 				Vec3 current;
 				for (; i <= n; i++)
 				{
@@ -108,6 +110,8 @@ namespace NetCheckApp
 				//создание массива имен
 				for (int j = n + 2, nj = Convert.ToInt32(str_in[j - 1]) + j - 1; j <= nj; j++)
 					Names[Convert.ToInt32(str_in[j].Split(' ')[0])] = str_in[j].Split(' ')[1];
+
+				VisitedThetra = new bool[n - i + 1];
 
 				//создание массива Тетра
 				for (; i <= n; i++)
@@ -210,9 +214,29 @@ namespace NetCheckApp
 				return ans;
 			}
 
+			private List<int> _T(int numVert)
+			{
+				List<int> ans = new List<int>();
+				bool V, _1;
+				for (int i = 0, n = Figures.Count; i < n; i++)
+				{
+					V = false; _1 = false;
+					foreach (int a in Figures[i].p)
+						if (numVert == a)
+						{ V = true; break; }
+					foreach (int b in Figures[i].near)
+						if (-1 == b)
+						{ _1 = true; break; }
+					if (_1 && V)
+						ans.Add(i);
+				}
+
+				return ans;
+			}
+
 			private int dfs(int u)
 			{
-				int visited = 0;
+				/*int visited = 0;
 				
 				foreach(int var in _1(u))
 					if(!VisitedVertecies[var])
@@ -225,6 +249,25 @@ namespace NetCheckApp
 					j = Figures[u].near[i];
 					if (OutterThetra.Contains(j))
 						visited += dfs(j);
+				}
+				return visited;*/
+
+				int visited = 0;
+				foreach(int a in _1(u))
+				{
+					if(!VisitedVertecies[a])
+					{
+						visited++;
+						VisitedVertecies[a] = true;
+						foreach(int b in _T(a))
+						{
+							if(!VisitedThetra[b])
+							{
+								VisitedThetra[b] = true;
+								visited += dfs(b);
+							}
+						}
+					}
 				}
 				return visited;
 			}
@@ -261,7 +304,7 @@ namespace NetCheckApp
 			checker.Input();
 			checker.MakeThetra();
 			Console.WriteLine("Value: {0}", checker.FiguresValue);
-			checker.ConnectedСomponent();
+			Console.WriteLine("ConnectedСomponent: {0}", checker.ConnectedСomponent());
 			
 
             Console.WriteLine("Hello World!");
