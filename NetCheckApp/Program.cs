@@ -12,6 +12,8 @@ namespace NetCheckApp
 			//0 1 3 - right(1)
 			//0 2 3 - left(2)
 			//1 2 3 - top(3)
+			//Вынести в отдельный файлы классы
+			//Приватность полей класса
 			public class Thetra
 			{
 				public Thetra(int _a, int _b, int _c, int _d, int _mat)
@@ -30,10 +32,11 @@ namespace NetCheckApp
 				//public double S;
 				public override string ToString()
 				{
-					return string.Format("{0} {1} {2} {3} | {4} | {5} {6} {7} {8}", p[0], p[1], p[2], p[3], material, near[0], near[1], near[2], near[3]);
+					return $"{p[0]} {p[1]} {p[2]} {p[3]} | {material} | {near[0]} {near[1]} {near[2]} {near[3]}";
 				}
 			}
 
+			//Переделать в структуру
 			public class Vec3
 			{
 				public double x { get; }
@@ -43,7 +46,7 @@ namespace NetCheckApp
 				public Vec3(string[] s) { x = Convert.ToDouble(s[0]); y = Convert.ToDouble(s[1]); z = Convert.ToDouble(s[2]); }
 				public override string ToString()
 				{
-					return string.Format("{0} {1} {2}", x, y, z);
+					return $"{x} {y} {z}";
 				}
 			}
 
@@ -59,11 +62,13 @@ namespace NetCheckApp
 			private bool[] VisitedVertecies;
 			private bool[] VisitedThetra;
 
-			private double Distance(Vec3 v, Vec3 u)
+			//Внести в структуру
+			private static double Distance(Vec3 v, Vec3 u)
 			{
 				return Math.Sqrt((v.x - u.x) * (v.x - u.x) + (v.y - u.y) * (v.y - u.y) + (v.z - u.z) * (v.z - u.z));
 			}
 
+			//Проверять через октодерева
 			public bool CheckOneness(Vec3 v)
 			{
 				foreach (Vec3 u in Points)
@@ -214,6 +219,7 @@ namespace NetCheckApp
 				return ans;
 			}
 
+			//Определяет внешние тетраэдры в которых есть вершина numVert
 			private List<int> _T(int numVert)
 			{
 				List<int> ans = new List<int>();
@@ -236,22 +242,6 @@ namespace NetCheckApp
 
 			private int dfs(int u)
 			{
-				/*int visited = 0;
-				
-				foreach(int var in _1(u))
-					if(!VisitedVertecies[var])
-					{
-						visited++;
-						VisitedVertecies[var] = true;
-					}
-				for (int i = 0, j; i < 4; i++)//соседние могут быть только по одной вершине
-				{
-					j = Figures[u].near[i];
-					if (OutterThetra.Contains(j))
-						visited += dfs(j);
-				}
-				return visited;*/
-
 				int visited = 0;
 				foreach(int a in _1(u))
 				{
