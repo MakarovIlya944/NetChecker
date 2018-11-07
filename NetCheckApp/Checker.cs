@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using TelmaQuasar;
 using System.IO;
+using Telma.Geometry;
 
 namespace NetCheckApp
 {
@@ -44,15 +45,19 @@ namespace NetCheckApp
 
 		public void Input()
 		{
+			
 			//создание массива точек
 			string[] str_in = File.ReadAllLines("in.txt");
 			int n = Convert.ToInt32(str_in[0]), i = 1;
 			VisitedVertecies = new bool[n];
-
+			OctTreeList<Vector3D> tree;
 			Vector3D current;
 			for (; i <= n; i++)
 			{
 				Vector3D.TryParse(str_in[i], out current);
+
+
+
 				//проверка повторения
 				//проверка близости
 				if (CheckNeighbourhood(current))//Проверять через октодерева
@@ -223,7 +228,10 @@ namespace NetCheckApp
 		//нахождение общего объема
 		public void AllValue()
 		{
-
+			//по всем слоям(dz)
+			//выбрать слой(zc,octotree)
+			//посчитать площадь
+			//v+=si*dz
 		}
 
 		//нахождение объема одного
