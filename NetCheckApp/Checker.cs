@@ -50,7 +50,7 @@ namespace NetCheckApp
 			string[] str_in = File.ReadAllLines("in.txt");
 			int n = Convert.ToInt32(str_in[0]), i = 1;
 			VisitedVertecies = new bool[n];
-			OctTreeList<Vector3D> tree;
+            MyQuadro tree;
 			Vector3D current;
 			for (; i <= n; i++)
 			{

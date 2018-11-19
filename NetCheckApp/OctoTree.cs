@@ -9,7 +9,7 @@ namespace NetCheckApp
 {
 	class OctoTree
 	{
-		class OctoTreeLeaf
+		/*class OctoTreeLeaf
 		{
 			public OctoTreeLeaf[] children;
 			public HashSet<int> container = new HashSet<int>();
@@ -90,6 +90,6 @@ namespace NetCheckApp
 					}
 				}
 			}
-		}
+		}*/
 	}
 }
