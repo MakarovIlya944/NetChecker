@@ -57,7 +57,7 @@ namespace NetCheckApp
             if (curLeaf.isConsist(HostArray[v]))
             {
                 double dist = curLeaf.max.Distance(curLeaf.min);
-                if (curLeaf!= root && (curLeaf.container.Count < minElem || dist < minDist))
+                if (curLeaf != root && (curLeaf.container.Count < minElem || dist < minDist))
                     curLeaf.container.Add(v);
                 else
                 {
@@ -73,8 +73,14 @@ namespace NetCheckApp
                         curLeaf.children[3] = new QuadroTreeLeaf(new Vector2D(new Vector2D((curLeaf.min.X + curLeaf.max.X) / 2, (curLeaf.min.Y + curLeaf.max.Y) / 2)),
                             new Vector2D(curLeaf.max.X, curLeaf.min.Y));
                     }
+
                     foreach (QuadroTreeLeaf el in curLeaf.children)
                         AddElement(v, el);
+                    
+                    foreach (int q in curLeaf.container)
+                        foreach (QuadroTreeLeaf el in curLeaf.children)
+                            AddElement(q, el);
+                    curLeaf.container.Clear();
                 }
             }
         }
