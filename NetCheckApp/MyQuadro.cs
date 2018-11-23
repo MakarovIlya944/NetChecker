@@ -87,16 +87,28 @@ namespace NetCheckApp
             }
         }
 
-        private int[] Find(int v)
+        private QuadroTreeLeaf DeepFind(int v, QuadroTreeLeaf curLeaf)
         {
-            return new int[4];
+            if (curLeaf.isConsist(HostArray[v]))
+                if (curLeaf.children == null)
+                    return curLeaf;
+                else
+                    foreach (QuadroTreeLeaf el in curLeaf.children)
+                    {
+                        QuadroTreeLeaf a = DeepFind(v, el);
+                        if (a != null)
+                            return a;
+                    }
+            return null;
         }
 
-        public Vector2D[] Find(Vector2D v)
+        public HashSet<Vector2D> Find(Vector2D v)
         {
-            Find(HostArray.IndexOf(v));
-
-            return new Vector2D[4];
+            HashSet<Vector2D> res = new HashSet<Vector2D>();
+            foreach (int a in DeepFind(HostArray.IndexOf(v), root).container)
+                res.Add(HostArray[a]);
+                   
+            return res;
         }
 
         public void AddElement(Vector2D a)

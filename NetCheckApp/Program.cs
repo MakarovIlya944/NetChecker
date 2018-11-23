@@ -1,5 +1,5 @@
 ﻿using System;
-
+using TelmaQuasar;
 
 namespace NetCheckApp
 {
@@ -9,15 +9,17 @@ namespace NetCheckApp
         {
 			Checker checker = new Checker();
 
-            MyQuadro tree = new MyQuadro(new Vector2D(-10,-10), new Vector2D(10,10));
-            tree.AddElement(new Vector2D(1, 1));
-            tree.AddElement(new Vector2D(1, 1.1));
-            tree.AddElement(new Vector2D(1, 1.01));
-            tree.AddElement(new Vector2D(2, 1));
-            tree.AddElement(new Vector2D(2, 1.01));
-            tree.AddElement(new Vector2D(2, 1.1));
-            tree.AddElement(new Vector2D(1, 4));
-            tree.AddElement(new Vector2D(5, 1));
+            OctoTree tree = new OctoTree(new Vector3D(-10,-10,-10), new Vector3D(10,10,10));
+            tree.AddElement(new Vector3D(1, 1,1));
+            tree.AddElement(new Vector3D(1, 1.1,2));
+            tree.AddElement(new Vector3D(1, 1.01,1));
+            tree.AddElement(new Vector3D(2, 1,1));
+            tree.AddElement(new Vector3D(2, 1.01,1));
+            tree.AddElement(new Vector3D(2, 1.1,1));
+            tree.AddElement(new Vector3D(1, 4,1));
+            tree.AddElement(new Vector3D(5, 1,1));
+            var a = tree.Find(new Vector3D(1, 1,1));
+            int afsd = 3;
 
 
             /*checker.Input();
