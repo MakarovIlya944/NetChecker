@@ -87,6 +87,18 @@ namespace NetCheckApp
             }
         }
 
+        private int[] Find(int v)
+        {
+            return new int[4];
+        }
+
+        public Vector2D[] Find(Vector2D v)
+        {
+            Find(HostArray.IndexOf(v));
+
+            return new Vector2D[4];
+        }
+
         public void AddElement(Vector2D a)
         {
             HostArray.Add(a);
