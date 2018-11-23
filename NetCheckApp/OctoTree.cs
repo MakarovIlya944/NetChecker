@@ -121,5 +121,16 @@ namespace NetCheckApp
             HostArray.Add(a);
             AddElement(HostArray.Count - 1, root);
         }
+
+        /// <summary>
+        /// Поиск точек ближайщих к плоскости
+        /// </summary>
+        /// <param name="p">Вектор нормали</param>
+        /// <param name="d">Смещение плоскости</param>
+        /// <returns></returns>
+        public HashSet<Vector3D> Find(Vector3D p, double d)
+        {
+            return new HashSet<Vector3D>();
+        }
     }
 }
