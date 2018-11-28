@@ -20,18 +20,26 @@ namespace NetCheckApp
             {
                 bool flag = true;
                 if (min.X < max.X)
-                    flag &= v.X > min.X && v.X < max.X;
+                    flag &= v.X >= min.X && v.X <= max.X;
                 else
-                    flag &= v.X < min.X && v.X > max.X;
+                    flag &= v.X <= min.X && v.X >= max.X;
                 if (min.Y < max.Y)
-                    flag &= v.Y > min.Y && v.Y < max.Y;
+                    flag &= v.Y >= min.Y && v.Y <= max.Y;
                 else
-                    flag &= v.Y < min.Y && v.Y > max.Y;
+                    flag &= v.Y <= min.Y && v.Y >= max.Y;
                 if (min.Z < max.Z)
-                    flag &= v.Z > min.Z && v.Z < max.Z;
+                    flag &= v.Z >= min.Z && v.Z <= max.Z;
                 else
-                    flag &= v.Z < min.Z && v.Z > max.Z;
+                    flag &= v.Z <= min.Z && v.Z >= max.Z;
                 return flag;
+            }
+
+            public bool isZConsist(double z)
+            {
+                if (min.Z < max.Z)
+                    return min.Z <= z && z <= max.Z;
+                else
+                    return z >= max.Z && min.Z >= z;
             }
 
             public OctoTreeLeaf(Vector3D _min, Vector3D _max, int _level) { level = _level; min = _min; max = _max; }
@@ -107,6 +115,25 @@ namespace NetCheckApp
             return null;
         }
 
+        private List<OctoTreeLeaf> DeepZFind(double z, OctoTreeLeaf curLeaf)
+        {
+            List<OctoTreeLeaf> result = new List<OctoTreeLeaf>();
+            if (curLeaf.isZConsist(z))
+            {
+                if (curLeaf.children == null)
+                    result.Add(curLeaf);
+                else
+                    foreach (OctoTreeLeaf el in curLeaf.children)
+                    {
+                        List<OctoTreeLeaf> a = DeepZFind(z, el);
+                        if (a != null)
+                            result.Concat(a);
+                    }
+                return result;
+            }
+            return null;
+        }
+
         public HashSet<Vector3D> Find(Vector3D v)
         {
             HashSet<Vector3D> res = new HashSet<Vector3D>();
@@ -127,10 +154,24 @@ namespace NetCheckApp
         /// </summary>
         /// <param name="p">Вектор нормали</param>
         /// <param name="d">Смещение плоскости</param>
-        /// <returns></returns>
+        /// <returns>Множество точек ближайших к плоскости</returns>
         public HashSet<Vector3D> Find(Vector3D p, double d)
         {
             return new HashSet<Vector3D>();
+        }
+
+        /// <summary>
+        /// Поиск точек ближайщих к плоскости параллельной плокости z = 0
+        /// </summary>
+        /// <param name="z">Высота</param>
+        /// <returns>Множество точек ближайших к плоскости</returns>
+        public HashSet<Vector3D> Find(double z)
+        {
+            HashSet<Vector3D> result = new HashSet<Vector3D>();
+            foreach (OctoTreeLeaf el in DeepZFind(z, root))
+                foreach (int v in el.container)
+                    result.Add(HostArray[v]);
+            return result;
         }
     }
 }

@@ -11,14 +11,14 @@ namespace NetCheckApp
 
             OctoTree tree = new OctoTree(new Vector3D(-10,-10,-10), new Vector3D(10,10,10));
             tree.AddElement(new Vector3D(1, 1,1));
-            tree.AddElement(new Vector3D(1, 1.1,2));
+            tree.AddElement(new Vector3D(1, 1.1,10));
             tree.AddElement(new Vector3D(1, 1.01,1));
             tree.AddElement(new Vector3D(2, 1,1));
-            tree.AddElement(new Vector3D(2, 1.01,1));
+            tree.AddElement(new Vector3D(2, 1.01,10));
             tree.AddElement(new Vector3D(2, 1.1,1));
             tree.AddElement(new Vector3D(1, 4,1));
-            tree.AddElement(new Vector3D(5, 1,1));
-            var a = tree.Find(new Vector3D(1, 1,1));
+            tree.AddElement(new Vector3D(5, 1,10));
+            var a = tree.Find(1);
             int afsd = 3;
 
 
