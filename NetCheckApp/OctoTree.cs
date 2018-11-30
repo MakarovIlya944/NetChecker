@@ -43,6 +43,8 @@ namespace NetCheckApp
             }
 
             public OctoTreeLeaf(Vector3D _min, Vector3D _max, int _level) { level = _level; min = _min; max = _max; }
+
+            public override string ToString() => $"L={level} min={min} max={max}";
         }
 
 
@@ -54,16 +56,23 @@ namespace NetCheckApp
 
         OctoTreeLeaf root;
         List<Vector3D> HostArray;
-        double minDist = 1E-3;
+        public double minDist = 1E-3;
         int minElem = 1;
         int maxLevel = 4;
+        public bool tooClose = false;
+        public enum treeStopFactors {d = 1,c,dc,l,dl,cl,dcl};
+        public treeStopFactors checkStop = treeStopFactors.d;
 
         private void AddElement(int v, OctoTreeLeaf curLeaf)
         {
             if (curLeaf.isConsist(HostArray[v]))
             {
                 double dist = curLeaf.max.Distance(curLeaf.min);
-                if (curLeaf != root && (curLeaf.container.Count < minElem || dist < minDist || curLeaf.level == maxLevel))
+                if (curLeaf != root && checkDist && dist < minDist)
+                    curLeaf.container.Add(v);
+                else if (curLeaf != root && (!checkLevel || curLeaf.level == maxLevel))
+                    curLeaf.container.Add(v);
+                else if(curLeaf != root && (!checkCount || curLeaf.container.Count < minElem))
                     curLeaf.container.Add(v);
                 else
                 {
@@ -127,7 +136,7 @@ namespace NetCheckApp
                     {
                         List<OctoTreeLeaf> a = DeepZFind(z, el);
                         if (a != null)
-                            result.Concat(a);
+                            result = result.Union(a).ToList<OctoTreeLeaf>();
                     }
                 return result;
             }
@@ -147,17 +156,6 @@ namespace NetCheckApp
         {
             HostArray.Add(a);
             AddElement(HostArray.Count - 1, root);
-        }
-
-        /// <summary>
-        /// Поиск точек ближайщих к плоскости
-        /// </summary>
-        /// <param name="p">Вектор нормали</param>
-        /// <param name="d">Смещение плоскости</param>
-        /// <returns>Множество точек ближайших к плоскости</returns>
-        public HashSet<Vector3D> Find(Vector3D p, double d)
-        {
-            return new HashSet<Vector3D>();
         }
 
         /// <summary>

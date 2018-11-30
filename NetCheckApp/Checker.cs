@@ -50,13 +50,13 @@ namespace NetCheckApp
 			string[] str_in = File.ReadAllLines("in.txt");
 			int n = Convert.ToInt32(str_in[0]), i = 1;
 			VisitedVertecies = new bool[n];
-            MyQuadro tree;
+            OctoTree tree = new OctoTree(new Vector3D(), new Vector3D());
 			Vector3D current;
 			for (; i <= n; i++)
 			{
 				Vector3D.TryParse(str_in[i], out current);
 
-
+                tree.AddElement(current);
 
 				//проверка повторения
 				//проверка близости
