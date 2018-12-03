@@ -62,6 +62,7 @@ namespace NetCheckApp
         public int maxLevel = 4;
         public bool tooClose = false;
         private List<int> badPoints;
+        private int levels = 0;
         [Flags]
         public enum treeStopFactors { d = 1, c, dc, l, dl, cl, dcl };
         public treeStopFactors checkStop = treeStopFactors.d;
@@ -108,6 +109,8 @@ namespace NetCheckApp
                             C, curLeaf.level + 1);
                         curLeaf.children[7] = new OctoTreeLeaf(new Vector3D(curLeaf.min.X, curLeaf.max.Y, curLeaf.max.Z),
                             C, curLeaf.level + 1);
+                        if (levels < curLeaf.level + 1)
+                            levels = curLeaf.level + 1;
                     }
 
                     foreach (OctoTreeLeaf el in curLeaf.children)
@@ -142,7 +145,10 @@ namespace NetCheckApp
             if (curLeaf.isZConsist(z))
             {
                 if (curLeaf.children == null)
-                    result.Add(curLeaf);
+                {
+                    if (curLeaf.container.Count != 0)
+                        result.Add(curLeaf);
+                }
                 else
                     foreach (OctoTreeLeaf el in curLeaf.children)
                     {
@@ -185,12 +191,12 @@ namespace NetCheckApp
 
         public double GetMinZ()
         {
-            return root.min.Z;
+            return Math.Min(root.min.Z, root.max.Z);
         }
 
         public double GetMaxZ()
         {
-            return root.max.Z;
+            return Math.Max(root.min.Z, root.max.Z);
         }
     }
 }

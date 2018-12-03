@@ -26,8 +26,8 @@ namespace NetCheckApp
 
             checker.Input();
 			checker.MakeThetra();
-			Console.WriteLine("Value: {0}", checker.FiguresValue);
-			Console.WriteLine("ConnectedСomponent: {0}", checker.ConnectedСomponent());
+			Console.WriteLine($"Value: {checker.FiguresValue} ==  {checker.AllValue()}");
+			Console.WriteLine($"ConnectedСomponent: {checker.ConnectedСomponent()}");
 			
 
             Console.WriteLine("Hello World!");

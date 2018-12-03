@@ -15,15 +15,17 @@ namespace NetCheckApp
 		public double eps = 1E-10;
         //шаг интегрирования
         private double dz = 1E-4;
-        //для 
+        //объем отдельных фигур
 		public double FiguresValue = 0;
+        //объем общий
+        public double VolumeValue = 0;
         //для поиска односвязности
 		private bool[] VisitedVertecies;
 		private bool[] VisitedThetra;
         //октодерево вершин
         private OctoTree tree;
         //список тетраэдров для каждой вершины для поиска площади
-        private List<HashSet<int>> point2Thetra;
+        private HashSet<int>[] point2Thetra;
 
         public Checker()
         {
@@ -60,7 +62,8 @@ namespace NetCheckApp
 			int n = Convert.ToInt32(str_in[0]), i = 1;
 			VisitedVertecies = new bool[n];
 			Vector3D current;
-            tree = new OctoTree(new Vector3D(-100,-100,-100), new Vector3D(100,100,100));
+            tree = new OctoTree(new Vector3D(0,0,0), new Vector3D(1,1,1));
+            tree.minDist = 0.1;
             for (; i <= n; i++)
             {
                 Vector3D.TryParse(str_in[i], out current);
@@ -72,6 +75,7 @@ namespace NetCheckApp
                     Console.WriteLine($"Точка слишком близко {i}");
                     return;
                 }
+                Points.Add(current);
 			}
 
 			n = i + Convert.ToInt32(str_in[i]);
@@ -82,9 +86,10 @@ namespace NetCheckApp
 				Names[Convert.ToInt32(str_in[j].Split(' ')[0])] = str_in[j].Split(' ')[1];
 
 			VisitedThetra = new bool[n - i + 1];
+            point2Thetra = new HashSet<int>[n];
 
-			//создание массива Тетра
-			for (; i <= n; i++)
+            //создание массива Тетра
+            for (; i <= n; i++)
 			{
                 //проверка имен
                 if (CheckName(Convert.ToInt32(str_in[i].Split(' ')[4])))
@@ -92,7 +97,11 @@ namespace NetCheckApp
                     Figures.Add(new Thetra(str_in[i].Split(' ')));
                     //заполнение связи от точки к тетраэдрам
                     foreach (int p in Figures[Figures.Count - 1].p)
+                    {
+                        if (point2Thetra[p] == null)
+                            point2Thetra[p] = new HashSet<int>();
                         point2Thetra[p].Add(Figures.Count - 1);
+                    }
                 }
 			}
 		}
@@ -115,10 +124,6 @@ namespace NetCheckApp
 				else
 					FiguresValue += V;
 			}
-
-			//-проверка пересечения
-
-			//проверка дыр
 		}
 
 		private int PositionNumerSide(List<int> a)
@@ -240,17 +245,34 @@ namespace NetCheckApp
         private double CrossArea(int ThetraId, double z)
         {
             double t;
+            Vector3D tmp;
             List<Vector3D> planePoints = new List<Vector3D>(4);
             foreach (int a in Figures[ThetraId].p)
                 foreach (int b in Figures[ThetraId].p)
-                    if (a != b || Math.Sign(tree[a].Z - z) * Math.Sign(tree[b].Z - z) <= 0)
+                    if (a != b && Math.Sign(tree[a].Z - z) * Math.Sign(tree[b].Z - z) <= 0)
                     {
-                        t = (z - tree[a].Z) / (tree[b].Z - tree[a].Z);
-                        planePoints.Add(tree[a] + t * (tree[b] - tree[a]));
+                        if (Math.Abs(tree[b].Z - tree[a].Z) < eps)
+                        {
+                            if (Math.Abs(tree[b].Z - z) < eps)
+                            {
+                                if (!planePoints.Contains(tree[b]))
+                                    planePoints.Add(tree[b]);
+                                if (!planePoints.Contains(tree[a]))
+                                    planePoints.Add(tree[a]);
+                            }
+                        }
+                        else
+                        {
+                            //проверка близости векторов
+                            t = (z - tree[a].Z) / (tree[b].Z - tree[a].Z);
+                            tmp = tree[a] + t * (tree[b] - tree[a]);
+                            if(!planePoints.Contains(tmp))
+                                planePoints.Add(tmp);
+                        }
                     }
 
             if (planePoints.Count == 3)
-                return Math.Abs(Vector3D.Cross((planePoints[1] - planePoints[0]), (planePoints[1] - planePoints[0])).Norm/2);
+                return Math.Abs(Vector3D.Cross((planePoints[1] - planePoints[0]), (planePoints[2] - planePoints[0])).Norm/2);
             return 0;
         }
 
@@ -270,7 +292,7 @@ namespace NetCheckApp
             //посчитать площадь
             //v+=si*dz
             double result = 0;
-            int layersCapacity = (int)(tree.GetMaxZ() / tree.GetMinZ()) + 1;
+            int layersCapacity = (int)((tree.GetMaxZ() - tree.GetMinZ()) / dz) + 1;
             for (int k = 0; k < layersCapacity; k++)
                result += CrossArea(k * dz) * dz;
 
