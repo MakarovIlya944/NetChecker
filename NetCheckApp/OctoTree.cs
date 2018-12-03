@@ -52,27 +52,39 @@ namespace NetCheckApp
         {
             root = new OctoTreeLeaf(a, b, 0);
             HostArray = new List<Vector3D>();
+            badPoints = new List<int>();
         }
 
         OctoTreeLeaf root;
         List<Vector3D> HostArray;
         public double minDist = 1E-3;
-        int minElem = 1;
-        int maxLevel = 4;
+        public int minElem = 1;
+        public int maxLevel = 4;
         public bool tooClose = false;
-        public enum treeStopFactors {d = 1,c,dc,l,dl,cl,dcl};
+        private List<int> badPoints;
+        [Flags]
+        public enum treeStopFactors { d = 1, c, dc, l, dl, cl, dcl };
         public treeStopFactors checkStop = treeStopFactors.d;
+
+        public Vector3D this[int index] { get => HostArray[index]; set => HostArray[index] = value; }
 
         private void AddElement(int v, OctoTreeLeaf curLeaf)
         {
             if (curLeaf.isConsist(HostArray[v]))
             {
                 double dist = curLeaf.max.Distance(curLeaf.min);
-                if (curLeaf != root && checkDist && dist < minDist)
+                if ((checkStop & treeStopFactors.d) == treeStopFactors.d && dist < minDist && curLeaf != root)
+                {
                     curLeaf.container.Add(v);
-                else if (curLeaf != root && (!checkLevel || curLeaf.level == maxLevel))
+                    if (curLeaf.container.Count > 1)
+                    {
+                        tooClose = true;
+                        badPoints.AddRange(curLeaf.container);
+                    }
+                }
+                else if ((checkStop & treeStopFactors.l) == treeStopFactors.l && curLeaf.level == maxLevel && curLeaf != root)
                     curLeaf.container.Add(v);
-                else if(curLeaf != root && (!checkCount || curLeaf.container.Count < minElem))
+                else if ((checkStop & treeStopFactors.c) == treeStopFactors.c && curLeaf.container.Count < minElem && curLeaf != root)
                     curLeaf.container.Add(v);
                 else
                 {
@@ -136,26 +148,26 @@ namespace NetCheckApp
                     {
                         List<OctoTreeLeaf> a = DeepZFind(z, el);
                         if (a != null)
-                            result = result.Union(a).ToList<OctoTreeLeaf>();
+                            result.AddRange(a);
                     }
                 return result;
             }
             return null;
         }
 
-        public HashSet<Vector3D> Find(Vector3D v)
+        public HashSet<int> Find(Vector3D v)
         {
-            HashSet<Vector3D> res = new HashSet<Vector3D>();
-            foreach (int a in DeepFind(HostArray.IndexOf(v), root).container)
-                res.Add(HostArray[a]);
-
-            return res;
+            return DeepFind(HostArray.IndexOf(v), root).container;
         }
 
-        public void AddElement(Vector3D a)
+        public List<int> AddElement(Vector3D a)
         {
             HostArray.Add(a);
             AddElement(HostArray.Count - 1, root);
+            if (tooClose)
+                return badPoints;
+            else
+                return null;
         }
 
         /// <summary>
@@ -163,13 +175,22 @@ namespace NetCheckApp
         /// </summary>
         /// <param name="z">Высота</param>
         /// <returns>Множество точек ближайших к плоскости</returns>
-        public HashSet<Vector3D> Find(double z)
+        public HashSet<int> Find(double z)
         {
-            HashSet<Vector3D> result = new HashSet<Vector3D>();
+            HashSet<int> result = new HashSet<int>();
             foreach (OctoTreeLeaf el in DeepZFind(z, root))
-                foreach (int v in el.container)
-                    result.Add(HostArray[v]);
+                result = result.Union(el.container).ToHashSet();
             return result;
+        }
+
+        public double GetMinZ()
+        {
+            return root.min.Z;
+        }
+
+        public double GetMaxZ()
+        {
+            return root.max.Z;
         }
     }
 }

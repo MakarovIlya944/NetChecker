@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using TelmaQuasar;
 using System.IO;
-using Telma.Geometry;
 
 namespace NetCheckApp
 {
@@ -14,12 +12,23 @@ namespace NetCheckApp
 		public Dictionary<int, string> Names = new Dictionary<int, string>();
 		//номера внешних тетраэдров
 		public List<int> OutterThetra = new List<int>();
-		//номера внешних вершин
-		//public HashSet<int> OutterVertecies = new HashSet<int>();
 		public double eps = 1E-10;
+        //шаг интегрирования
+        private double dz = 1E-4;
+        //для 
 		public double FiguresValue = 0;
+        //для поиска односвязности
 		private bool[] VisitedVertecies;
 		private bool[] VisitedThetra;
+        //октодерево вершин
+        private OctoTree tree;
+        //список тетраэдров для каждой вершины для поиска площади
+        private List<HashSet<int>> point2Thetra;
+
+        public Checker()
+        {
+            
+        }
 
 		//Проверять через октодерева
 		public bool CheckOneness(Vector3D v)
@@ -50,20 +59,19 @@ namespace NetCheckApp
 			string[] str_in = File.ReadAllLines("in.txt");
 			int n = Convert.ToInt32(str_in[0]), i = 1;
 			VisitedVertecies = new bool[n];
-            OctoTree tree = new OctoTree(new Vector3D(), new Vector3D());
 			Vector3D current;
-			for (; i <= n; i++)
-			{
-				Vector3D.TryParse(str_in[i], out current);
-
+            tree = new OctoTree(new Vector3D(-100,-100,-100), new Vector3D(100,100,100));
+            for (; i <= n; i++)
+            {
+                Vector3D.TryParse(str_in[i], out current);
+                //проверка повторения
+                //проверка близости
                 tree.AddElement(current);
-
-				//проверка повторения
-				//проверка близости
-				if (CheckNeighbourhood(current))//Проверять через октодерева
-					Points.Add(current);
-				else
-					Console.WriteLine("Точка слишком близко {0}", i);
+                if (tree.tooClose)
+                {
+                    Console.WriteLine($"Точка слишком близко {i}");
+                    return;
+                }
 			}
 
 			n = i + Convert.ToInt32(str_in[i]);
@@ -78,9 +86,14 @@ namespace NetCheckApp
 			//создание массива Тетра
 			for (; i <= n; i++)
 			{
-				//проверка имен
-				if (CheckName(Convert.ToInt32(str_in[i].Split(' ')[4])))
-					Figures.Add(new Thetra(str_in[i].Split(' ')));
+                //проверка имен
+                if (CheckName(Convert.ToInt32(str_in[i].Split(' ')[4])))
+                {
+                    Figures.Add(new Thetra(str_in[i].Split(' ')));
+                    //заполнение связи от точки к тетраэдрам
+                    foreach (int p in Figures[Figures.Count - 1].p)
+                        point2Thetra[p].Add(Figures.Count - 1);
+                }
 			}
 		}
 
@@ -98,7 +111,7 @@ namespace NetCheckApp
 				//-проверка объема
 				V = Value(i);
 				if (V < 1E-8)
-					Console.WriteLine("Нулевой объём у тэтрадра #{0}", i);
+					Console.WriteLine($"Нулевой объём у тэтрадра #{i}");
 				else
 					FiguresValue += V;
 			}
@@ -221,17 +234,47 @@ namespace NetCheckApp
 
 		public bool ConnectedСomponent()
 		{
-
 			return OutterThetra.Count == dfs(0);
 		}
 
+        private double CrossArea(int ThetraId, double z)
+        {
+            double t;
+            List<Vector3D> planePoints = new List<Vector3D>(4);
+            foreach (int a in Figures[ThetraId].p)
+                foreach (int b in Figures[ThetraId].p)
+                    if (a != b || Math.Sign(tree[a].Z - z) * Math.Sign(tree[b].Z - z) <= 0)
+                    {
+                        t = (z - tree[a].Z) / (tree[b].Z - tree[a].Z);
+                        planePoints.Add(tree[a] + t * (tree[b] - tree[a]));
+                    }
+
+            if (planePoints.Count == 3)
+                return Math.Abs(Vector3D.Cross((planePoints[1] - planePoints[0]), (planePoints[1] - planePoints[0])).Norm/2);
+            return 0;
+        }
+
+        private double CrossArea(double z)
+        {
+            double result = 0;
+            foreach(int el in GetThetras(tree.Find(z)))
+                result += CrossArea(el, z);
+            return result;
+        }
+
 		//нахождение общего объема
-		public void AllValue()
+		public double AllValue()
 		{
-			//по всем слоям(dz)
-			//выбрать слой(zc,octotree)
-			//посчитать площадь
-			//v+=si*dz
+            //по всем слоям(dz)
+            //выбрать слой(zc,octotree)
+            //посчитать площадь
+            //v+=si*dz
+            double result = 0;
+            int layersCapacity = (int)(tree.GetMaxZ() / tree.GetMinZ()) + 1;
+            for (int k = 0; k < layersCapacity; k++)
+               result += CrossArea(k * dz) * dz;
+
+            return result;
 		}
 
 		//нахождение объема одного
@@ -246,6 +289,17 @@ namespace NetCheckApp
 				- (Points[i[1]].X - Points[i[0]].X) * (Points[i[3]].Y - Points[i[0]].Y) * (Points[i[2]].Z - Points[i[0]].Z)
 				- (Points[i[2]].X - Points[i[0]].X) * (Points[i[1]].Y - Points[i[0]].Y) * (Points[i[3]].Z - Points[i[0]].Z)) / 6.0;
 		}
+
+        private HashSet<int> GetThetras(HashSet<int> points)
+        {
+            if (points == null)
+                return null;
+            HashSet<int> result = new HashSet<int>();
+            foreach (int p in points)
+                result.UnionWith(point2Thetra[p]);
+
+            return result;
+        }
 	}
 
 }

@@ -5,4 +5,12 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Constants.cs" />
+    <Compile Remove="GeometricObject.cs" />
+    <Compile Remove="IFinder.cs" />
+    <Compile Remove="MyQuadro.cs" />
+    <Compile Remove="OctTreeList.cs" />
+  </ItemGroup>
+
 </Project>
