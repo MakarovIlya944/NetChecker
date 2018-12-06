@@ -14,7 +14,7 @@ namespace NetCheckApp
 		public List<int> OutterThetra = new List<int>();
 		public double eps = 1E-10;
         //шаг интегрирования
-        private double dz = 1E-4;
+        private double dz = 1E-1;
         //объем отдельных фигур
 		public double FiguresValue = 0;
         //объем общий
@@ -255,9 +255,10 @@ namespace NetCheckApp
                         {
                             if (Math.Abs(tree[b].Z - z) < eps)
                             {
-                                if (!planePoints.Contains(tree[b]))
+
+                                if (planePoints.FindAll(x => tree[b].Distance(x) < eps).Count == 0)
                                     planePoints.Add(tree[b]);
-                                if (!planePoints.Contains(tree[a]))
+                                if (planePoints.FindAll(x => tree[a].Distance(x) < eps).Count == 0)
                                     planePoints.Add(tree[a]);
                             }
                         }
@@ -266,7 +267,7 @@ namespace NetCheckApp
                             //проверка близости векторов
                             t = (z - tree[a].Z) / (tree[b].Z - tree[a].Z);
                             tmp = tree[a] + t * (tree[b] - tree[a]);
-                            if(!planePoints.Contains(tmp))
+                            if(planePoints.FindAll(x => tmp.Distance(x) < eps).Count == 0)
                                 planePoints.Add(tmp);
                         }
                     }
