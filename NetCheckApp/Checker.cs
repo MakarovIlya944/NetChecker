@@ -1,69 +1,59 @@
 ﻿using System;
 using System.Collections.Generic;
-using TelmaQuasar;
 using System.IO;
+using System.Linq;
 
 namespace NetCheckApp
 {
-	public class Checker
-	{
-		public List<Vector3D> Points = new List<Vector3D>();
-		public List<Thetra> Figures = new List<Thetra>();
-		public Dictionary<int, string> Names = new Dictionary<int, string>();
-		//номера внешних тетраэдров
-		public List<int> OutterThetra = new List<int>();
-		public double eps = 1E-10;
-        //шаг интегрирования
-        private double dz = 1E-1;
+    public class TooCloseException : ApplicationException
+    {
+    }
+
+    public class MeshHaventPointException : ApplicationException
+    {
+    }
+
+    public enum CheckerMode { None = 0, ConnectComonent = 1, Value = 2, ConnectComonentValue = 3 };
+
+    public class Checker
+    {
+        public List<Thetra> Figures = new List<Thetra>();
+        public Dictionary<int, string> Names = new Dictionary<int, string>();
+        //номера внешних тетраэдров
+        public List<int> OutterThetra = new List<int>();
         //объем отдельных фигур
-		public double FiguresValue = 0;
+        public double FiguresValue = 0;
         //объем общий
         public double VolumeValue = 0;
+        //малая величина
+        public double eps = 1E-4;
+        //minDist
+        public double dist = 1E-1;
         //для поиска односвязности
-		private bool[] VisitedVertecies;
-		private bool[] VisitedThetra;
+        private bool[] VisitedVertecies;
+        private bool[] VisitedThetra;
         //октодерево вершин
         private OctoTree tree;
-        //список тетраэдров для каждой вершины для поиска площади
-        private HashSet<int>[] point2Thetra;
 
         public Checker()
         {
-            
+
         }
 
-		//Проверять через октодерева
-		public bool CheckOneness(Vector3D v)
-		{
-			foreach (Vector3D u in Points)
-				if (u == v)
-					return false;
-			return true;
-		}
+        public bool CheckName(int mat)
+        {
+            return Names.ContainsKey(mat);
+        }
 
-		public bool CheckNeighbourhood(Vector3D v)
-		{
-			foreach (Vector3D u in Points)
-				if (Vector3D.Distance(u, v) < eps)
-					return false;
-			return true;
-		}
-
-		public bool CheckName(int mat)
-		{
-			return Names.ContainsKey(mat);
-		}
-
-		public void Input()
-		{
-			
-			//создание массива точек
-			string[] str_in = File.ReadAllLines("in.txt");
-			int n = Convert.ToInt32(str_in[0]), i = 1;
-			VisitedVertecies = new bool[n];
-			Vector3D current;
-            tree = new OctoTree(new Vector3D(0,0,0), new Vector3D(1,1,1));
-            tree.minDist = 0.1;
+        public void Input(string path)
+        {
+            //создание массива точек
+            string[] str_in = File.ReadAllLines(path);
+            int n = Convert.ToInt32(str_in[0]), i = 1;
+            VisitedVertecies = new bool[n];
+            Vector3D current;
+            tree = new OctoTree(new Vector3D(0, 0, 0), new Vector3D(1, 1, 1));
+            tree.minDist = dist;
             for (; i <= n; i++)
             {
                 Vector3D.TryParse(str_in[i], out current);
@@ -75,254 +65,314 @@ namespace NetCheckApp
                     Console.WriteLine($"Точка слишком близко {i}");
                     return;
                 }
-                Points.Add(current);
-			}
+                //tree.Add(current);
+            }
 
-			n = i + Convert.ToInt32(str_in[i]);
-			i++;
+            n = i + Convert.ToInt32(str_in[i]);
+            i++;
 
-			//создание массива имен
-			for (int j = n + 2, nj = Convert.ToInt32(str_in[j - 1]) + j - 1; j <= nj; j++)
-				Names[Convert.ToInt32(str_in[j].Split(' ')[0])] = str_in[j].Split(' ')[1];
+            //создание массива имен
+            for (int j = n + 2, nj = Convert.ToInt32(str_in[j - 1]) + j - 1; j <= nj; j++)
+                Names[Convert.ToInt32(str_in[j].Split(' ')[0])] = str_in[j].Split(' ')[1];
 
-			VisitedThetra = new bool[n - i + 1];
-            point2Thetra = new HashSet<int>[n];
+            VisitedThetra = new bool[n - i + 1];
 
             //создание массива Тетра
             for (; i <= n; i++)
-			{
                 //проверка имен
                 if (CheckName(Convert.ToInt32(str_in[i].Split(' ')[4])))
-                {
                     Figures.Add(new Thetra(str_in[i].Split(' ')));
-                    //заполнение связи от точки к тетраэдрам
-                    foreach (int p in Figures[Figures.Count - 1].p)
-                    {
-                        if (point2Thetra[p] == null)
-                            point2Thetra[p] = new HashSet<int>();
-                        point2Thetra[p].Add(Figures.Count - 1);
-                    }
-                }
-			}
-		}
+        }
 
-		public void MakeThetra()
-		{
-			double V;
-			//-поиск соседей
-			for (int i = 0, neib = 0; i < Figures.Count; i++)
-			{
-				neib = FindNeiborgs(Figures[i]);
-				if (neib == 0)
-					Console.WriteLine("Отдельная фигура");
-				if (neib < 4)
-					OutterThetra.Add(i);
-				//-проверка объема
-				V = Value(i);
-				if (V < 1E-8)
-					Console.WriteLine($"Нулевой объём у тэтрадра #{i}");
-				else
-					FiguresValue += V;
-			}
-		}
-
-		private int PositionNumerSide(List<int> a)
-		{
-			if (a.Contains(0))
-				if (a.Contains(1))
-					if (a.Contains(2))
-						return 0;
-					else
-						return 1;
-				else
-					return 2;
-			return 3;
-		}
-
-		//Возвращает кол-во соседей
-		public int FindNeiborgs(Thetra T)
-		{
-			//поиск соседних тетра
-			List<int> finded = new List<int>(3);
-			List<int> looked = new List<int>(3);
-			int nT = Figures.IndexOf(T), nY;
-			int i, j;
-			int countSide = 0;
-			foreach (Thetra Y in Figures)
-				if (T != Y)
-				{
-					for (j = 0; j < 4; j++)
-					{
-						for (i = 0; i < 4 && Y.p[i] != T.p[j]; i++) ;
-						if (i != 4)
-						{
-							finded.Add(i);
-							looked.Add(j);
-						}
-					}
-					if (finded.Count == 3)//перезаписывается лишний раз уже известные стороны
-					{
-						nY = Figures.IndexOf(Y);
-
-						Figures[nT].near[PositionNumerSide(looked)] = nY;
-						Figures[nY].near[PositionNumerSide(finded)] = nT;
-
-						countSide++;
-					}
-					finded.Clear();
-					looked.Clear();
-				}
-			return countSide;
-		}
-
-		//Определяет какие вершины тетраэдра внешние
-		private List<int> _1(int numThetra)
-		{
-			List<int> ans = new List<int>();
-			for (int i = 0, cur = 0; i < 4; i++)
-				if (Figures[numThetra].near[i] == -1)
-				{
-					cur = Figures[numThetra].p[i / 3];
-					if (!ans.Contains(cur)) ans.Add(cur);
-
-					cur = Figures[numThetra].p[i / 2 + 1];
-					if (!ans.Contains(cur)) ans.Add(cur);
-
-					cur = Figures[numThetra].p[(i - 3) / 3 + 3];
-					if (!ans.Contains(cur)) ans.Add(cur);
-				}
-			return ans;
-		}
-
-		//Определяет внешние тетраэдры в которых есть вершина numVert
-		private List<int> _T(int numVert)
-		{
-			List<int> ans = new List<int>();
-			bool V, _1;
-			for (int i = 0, n = Figures.Count; i < n; i++)
-			{
-				V = false; _1 = false;
-				foreach (int a in Figures[i].p)
-					if (numVert == a)
-					{ V = true; break; }
-				foreach (int b in Figures[i].near)
-					if (-1 == b)
-					{ _1 = true; break; }
-				if (_1 && V)
-					ans.Add(i);
-			}
-
-			return ans;
-		}
-
-		private int dfs(int u)
-		{
-			int visited = 0;
-			foreach (int a in _1(u))
-			{
-				if (!VisitedVertecies[a])
-				{
-					visited++;
-					VisitedVertecies[a] = true;
-					foreach (int b in _T(a))
-					{
-						if (!VisitedThetra[b])
-						{
-							VisitedThetra[b] = true;
-							visited += dfs(b);
-						}
-					}
-				}
-			}
-			return visited;
-		}
-
-		public bool ConnectedСomponent()
-		{
-			return OutterThetra.Count == dfs(0);
-		}
-
-        private double CrossArea(int ThetraId, double z)
+        public void Check()
         {
-            double t;
-            Vector3D tmp;
-            List<Vector3D> planePoints = new List<Vector3D>(4);
-            foreach (int a in Figures[ThetraId].p)
-                foreach (int b in Figures[ThetraId].p)
-                    if (a != b && Math.Sign(tree[a].Z - z) * Math.Sign(tree[b].Z - z) <= 0)
-                    {
-                        if (Math.Abs(tree[b].Z - tree[a].Z) < eps)
-                        {
-                            if (Math.Abs(tree[b].Z - z) < eps)
-                            {
+            var mode = CheckerMode.ConnectComonentValue;
+            MakeThetra();
+            bool isconnect = ConnectedСomponent();
+            double allvalue = AllValue();
+            Console.WriteLine("Figures add:\t\t\tcorrect");
+            if ((mode & CheckerMode.ConnectComonent) == CheckerMode.ConnectComonent)
+                Console.WriteLine("Connected component:\t\t\t" + (isconnect ? "correct" : "incorrect"));
+            if ((mode & CheckerMode.Value) == CheckerMode.Value)
+                Console.WriteLine($"Value: Sum:{FiguresValue} == Numeric:{allvalue}");
+        }
 
-                                if (planePoints.FindAll(x => tree[b].Distance(x) < eps).Count == 0)
-                                    planePoints.Add(tree[b]);
-                                if (planePoints.FindAll(x => tree[a].Distance(x) < eps).Count == 0)
-                                    planePoints.Add(tree[a]);
-                            }
-                        }
+        /// <summary>
+        /// Проверка близости и повторения вершин
+        /// </summary>
+        /// <param name="vertices">Список вершин</param>
+        /// <returns>True если всё ок</returns>
+        public void Check(Vector3D[] vertices)
+        {
+            int n = vertices.Length;
+            VisitedVertecies = new bool[n];
+            Vector3D max = vertices.Aggregate((x, y) => new Vector3D(
+                Math.Max(Math.Abs(x.X), Math.Abs(y.X)),
+                Math.Max(Math.Abs(x.Y), Math.Abs(y.Y)),
+                Math.Max(Math.Abs(x.Z), Math.Abs(y.Z))));
+
+            tree = new OctoTree(-max, max);
+            tree.minDist = dist;
+            for (int i = 0; i < n; i++)
+            {
+                tree.AddElement(vertices[i]);
+                if (tree.tooClose)
+                {
+                    Console.WriteLine($"ERROR! Point {i} too close!");
+                    throw new TooCloseException();
+                }
+            }
+            Console.WriteLine("Vertices distance:\t\t\tcorrect");
+        }
+
+        /// <summary>
+        /// Проверка единственности компоненты связности и наличия дыр в области
+        /// </summary>
+        /// <param name="domains"></param>
+        /// <returns>True если всё ок</returns>
+        /*public void Check(IGeometryDomain[] domains, CheckerMode mode)
+        {
+            if (mode != CheckerMode.None)
+            {
+                Console.WriteLine("----------------------------------------NetCheckerApp------------------------------------------------");
+                int[] vertecies = new int[5];
+                int tmp;
+                foreach (var el in domains)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        tmp = tree.FindIndex(el.Mesh[i]);
+                        if (tmp != -1)
+                            vertecies[i] = tmp;
                         else
                         {
-                            //проверка близости векторов
-                            t = (z - tree[a].Z) / (tree[b].Z - tree[a].Z);
-                            tmp = tree[a] + t * (tree[b] - tree[a]);
-                            if(planePoints.FindAll(x => tmp.Distance(x) < eps).Count == 0)
-                                planePoints.Add(tmp);
+                            Console.WriteLine($"ERROR! Point {el.Mesh[i]} didn't exist at mesh {el.Mesh}!");
+                            throw new MeshHaventPointException();
                         }
                     }
+                    vertecies[4] = el.MaterialNumber;
+                    Figures.Add(new Thetra(vertecies));
+                }
+                Console.WriteLine("Thetras add:\t\t\tcorrect");
 
-            if (planePoints.Count == 3)
-                return Math.Abs(Vector3D.Cross((planePoints[1] - planePoints[0]), (planePoints[2] - planePoints[0])).Norm/2);
-            return 0;
+                MakeThetra();
+                bool isconnect = ConnectedСomponent();
+                double allvalue = AllValue();
+                Console.WriteLine("Figures add:\t\t\tcorrect");
+                if ((mode & CheckerMode.ConnectComonent) == CheckerMode.ConnectComonent)
+                    Console.WriteLine("Connected component:\t\t\t" + (isconnect ? "correct" : "incorrect"));
+                if ((mode & CheckerMode.Value) == CheckerMode.Value)
+                    Console.WriteLine($"Value: Sum:{FiguresValue} == Numeric:{allvalue}");
+            }
+        }
+        */
+        private void MakeThetra()
+        {
+            double V;
+            //-поиск соседей
+            for (int i = 0, neib = 0; i < Figures.Count; i++)
+            {
+                neib = FindNeiborgs(Figures[i]);
+                if (neib == 0)
+                    Console.WriteLine($"WARNING! Standalone figure: #{i}");
+                if (neib < 4)
+                    OutterThetra.Add(i);
+                //-проверка объема
+                V = Value(i);
+#if DEBUG
+                Console.WriteLine($"i: {V}");
+#endif
+                if (V < eps)
+                    Console.WriteLine($"WARNING! Value #{i} less then {eps}");
+                else
+                    FiguresValue += V;
+            }
         }
 
-        private double CrossArea(double z)
+        private int PositionNumerSide(List<int> a)
+        {
+            if (a.Contains(0))
+                if (a.Contains(1))
+                    if (a.Contains(2))
+                        return 0;
+                    else
+                        return 1;
+                else
+                    return 2;
+            return 3;
+        }
+
+        //Возвращает кол-во соседей
+        private int FindNeiborgs(Thetra T)
+        {
+            //поиск соседних тетра
+            List<int> finded = new List<int>(3);
+            List<int> looked = new List<int>(3);
+            int nT = Figures.IndexOf(T), nY;
+            int i, j;
+            int countSide = 0;
+            foreach (Thetra Y in Figures)
+                if (T != Y)
+                {
+                    for (j = 0; j < 4; j++)
+                    {
+                        for (i = 0; i < 4 && Y.p[i] != T.p[j]; i++) ;
+                        if (i != 4)
+                        {
+                            finded.Add(i);
+                            looked.Add(j);
+                        }
+                    }
+                    if (finded.Count == 3)//перезаписывается лишний раз уже известные стороны
+                    {
+                        nY = Figures.IndexOf(Y);
+
+                        Figures[nT].near[PositionNumerSide(looked)] = nY;
+                        Figures[nY].near[PositionNumerSide(finded)] = nT;
+
+                        countSide++;
+                    }
+                    finded.Clear();
+                    looked.Clear();
+                }
+            return countSide;
+        }
+
+        //Определяет какие вершины тетраэдра внешние
+        private List<int> _1(int numThetra)
+        {
+            List<int> ans = new List<int>();
+            for (int i = 0, cur = 0; i < 4; i++)
+                if (Figures[numThetra].near[i] == -1)
+                {
+                    cur = Figures[numThetra].p[i / 3];
+                    if (!ans.Contains(cur)) ans.Add(cur);
+
+                    cur = Figures[numThetra].p[i / 2 + 1];
+                    if (!ans.Contains(cur)) ans.Add(cur);
+
+                    cur = Figures[numThetra].p[(i - 3) / 3 + 3];
+                    if (!ans.Contains(cur)) ans.Add(cur);
+                }
+            return ans;
+        }
+
+        //Определяет внешние тетраэдры в которых есть вершина numVert
+        private List<int> _T(int numVert)
+        {
+            List<int> ans = new List<int>();
+            bool V, _1;
+            for (int i = 0, n = Figures.Count; i < n; i++)
+            {
+                V = false; _1 = false;
+                foreach (int a in Figures[i].p)
+                    if (numVert == a)
+                    { V = true; break; }
+                foreach (int b in Figures[i].near)
+                    if (-1 == b)
+                    { _1 = true; break; }
+                if (_1 && V)
+                    ans.Add(i);
+            }
+
+            return ans;
+        }
+
+        private int dfs(int u)
+        {
+            int visited = 0;
+            foreach (int a in _1(u))
+            {
+                if (!VisitedVertecies[a])
+                {
+                    visited++;
+                    VisitedVertecies[a] = true;
+                    foreach (int b in _T(a))
+                    {
+                        if (!VisitedThetra[b])
+                        {
+                            VisitedThetra[b] = true;
+                            visited += dfs(b);
+                        }
+                    }
+                }
+            }
+            return visited;
+        }
+
+        private bool ThetrasMatch()
+        {
+            int t = 0;
+            //if(VisitedThetra[t]) {OutterThetra.Exists(x => x == t)}
+            for (; t < VisitedThetra.Length && (VisitedThetra[t] || !OutterThetra.Exists(x => x == t)); t++) ;
+            //внешние тетраэдры и dfs не соответствуют 
+            return t == VisitedThetra.Length;
+        }
+
+        private bool ConnectedСomponent()
+        {
+#if DEBUG
+            int a = dfs(0);
+            bool b = ThetrasMatch();
+            Console.WriteLine($"Tree: {tree.Count}");
+            Console.WriteLine($"Dfs: {a}");
+            Console.WriteLine($"ThetrasMatch: {b}");
+            return tree.Count == a && b;
+#else
+            return tree.Count == dfs(0) && ThetrasMatch();
+#endif
+        }
+
+        private double SurfaceIntegral(int numThetra)
+        {
+            double result = 0, tmp;
+            int[] side;
+            for (int i = 0; i < 4; i++)
+                if (Figures[numThetra].near[i] == -1)
+                {
+                    side = Figures[numThetra].GetSide(i);
+                    Vector3D n = Vector3D.Cross(tree[side[1]] - tree[side[0]], tree[side[2]] - tree[side[0]]);
+                    Vector3D a = (tree[side[0]] + tree[side[1]] + tree[side[2]]) / 3.0;
+                    tmp = n.X * a.X * n.Norm / 2;
+                    a = tree[Figures[numThetra].GetOpposite(i)] - a;
+                    if (n * a > -eps)
+                        tmp *= -1;
+#if DEBUG
+                    Console.WriteLine($"\r\nThetra: {numThetra}\r\nNorm: {n}\r\nA: {a}");
+                    Console.WriteLine($"Int: {tmp}");
+                    Console.WriteLine($"0 :{tree[side[0]]}");
+                    Console.WriteLine($"1 :{tree[side[1]]}");
+                    Console.WriteLine($"2 :{tree[side[2]]}");
+#endif
+                    result += tmp;
+                }
+#if DEBUG
+            Console.WriteLine("-------------------------------------------------------------------\r\n");
+#endif
+            return result;
+        }
+
+        //нахождение общего объема
+        private double AllValue()
         {
             double result = 0;
-            foreach(int el in GetThetras(tree.Find(z)))
-                result += CrossArea(el, z);
+            foreach (int el in OutterThetra)
+                result += SurfaceIntegral(el);
+            VolumeValue = result;
             return result;
         }
 
-		//нахождение общего объема
-		public double AllValue()
-		{
-            //по всем слоям(dz)
-            //выбрать слой(zc,octotree)
-            //посчитать площадь
-            //v+=si*dz
-            double result = 0;
-            int layersCapacity = (int)((tree.GetMaxZ() - tree.GetMinZ()) / dz) + 1;
-            for (int k = 0; k < layersCapacity; k++)
-               result += CrossArea(k * dz) * dz;
-
-            return result;
-		}
-
-		//нахождение объема одного
-		public double Value(int u)
-		{
-			int[] i = Figures[u].p;
-
-			return Math.Abs((Points[i[1]].X - Points[i[0]].X) * (Points[i[2]].Y - Points[i[0]].Y) * (Points[i[3]].Z - Points[i[0]].Z)
-				+ (Points[i[3]].X - Points[i[0]].X) * (Points[i[1]].Y - Points[i[0]].Y) * (Points[i[2]].Z - Points[i[0]].Z)
-				+ (Points[i[2]].X - Points[i[0]].X) * (Points[i[3]].Y - Points[i[0]].Y) * (Points[i[1]].Z - Points[i[0]].Z)
-				- (Points[i[3]].X - Points[i[0]].X) * (Points[i[2]].Y - Points[i[0]].Y) * (Points[i[1]].Z - Points[i[0]].Z)
-				- (Points[i[1]].X - Points[i[0]].X) * (Points[i[3]].Y - Points[i[0]].Y) * (Points[i[2]].Z - Points[i[0]].Z)
-				- (Points[i[2]].X - Points[i[0]].X) * (Points[i[1]].Y - Points[i[0]].Y) * (Points[i[3]].Z - Points[i[0]].Z)) / 6.0;
-		}
-
-        private HashSet<int> GetThetras(HashSet<int> points)
+        //нахождение объема одного
+        private double Value(int u)
         {
-            if (points == null)
-                return null;
-            HashSet<int> result = new HashSet<int>();
-            foreach (int p in points)
-                result.UnionWith(point2Thetra[p]);
+            int[] i = Figures[u].p;
 
-            return result;
+            return Math.Abs((tree[i[1]].X - tree[i[0]].X) * (tree[i[2]].Y - tree[i[0]].Y) * (tree[i[3]].Z - tree[i[0]].Z)
+                + (tree[i[3]].X - tree[i[0]].X) * (tree[i[1]].Y - tree[i[0]].Y) * (tree[i[2]].Z - tree[i[0]].Z)
+                + (tree[i[2]].X - tree[i[0]].X) * (tree[i[3]].Y - tree[i[0]].Y) * (tree[i[1]].Z - tree[i[0]].Z)
+                - (tree[i[3]].X - tree[i[0]].X) * (tree[i[2]].Y - tree[i[0]].Y) * (tree[i[1]].Z - tree[i[0]].Z)
+                - (tree[i[1]].X - tree[i[0]].X) * (tree[i[3]].Y - tree[i[0]].Y) * (tree[i[2]].Z - tree[i[0]].Z)
+                - (tree[i[2]].X - tree[i[0]].X) * (tree[i[1]].Y - tree[i[0]].Y) * (tree[i[3]].Z - tree[i[0]].Z)) / 6.0;
         }
-	}
-
+    }
 }

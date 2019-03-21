@@ -1,5 +1,4 @@
 ﻿using System;
-using TelmaQuasar;
 
 namespace NetCheckApp
 {

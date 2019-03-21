@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using TelmaQuasar;
 
 namespace NetCheckApp
 {
@@ -68,6 +67,13 @@ namespace NetCheckApp
         public treeStopFactors checkStop = treeStopFactors.d;
 
         public Vector3D this[int index] { get => HostArray[index]; set => HostArray[index] = value; }
+
+        public int Count { get => HostArray.Count; }
+
+        public int FindIndex(Vector3D v)
+        {
+            return HostArray.FindIndex(x => x == v);
+        }
 
         private void AddElement(int v, OctoTreeLeaf curLeaf)
         {
@@ -185,7 +191,7 @@ namespace NetCheckApp
         {
             HashSet<int> result = new HashSet<int>();
             foreach (OctoTreeLeaf el in DeepZFind(z, root))
-                result = result.Union(el.container).ToHashSet();
+                result.UnionWith(el.container);
             return result;
         }
 
