@@ -1,5 +1,6 @@
 ﻿using System;
 
+
 namespace NetCheckApp
 {
     class Program

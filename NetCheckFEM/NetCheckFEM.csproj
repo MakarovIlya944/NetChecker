@@ -32,6 +32,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
@@ -40,7 +43,7 @@
     <Compile Include="NetGenerator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="TSM.cs" />
-    <Compile Include="Vector.cs" />
+    <Compile Include="Vectors.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

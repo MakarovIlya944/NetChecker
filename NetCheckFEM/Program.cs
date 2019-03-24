@@ -10,10 +10,8 @@ namespace NetCheckerFEM
     {
         static void Main()
         {
-            double[] p = new double[4] { 1, 2, 3, 4 };
-            Vector a = new Vector(p);
-            p[0] = 312;
-            p[1] = 312;
+            NetGenerator a = new NetGenerator();
+            a.Load(@"C:\Work\GMesh\cube.msh");
         }
     }
 }
