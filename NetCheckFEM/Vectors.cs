@@ -6,6 +6,25 @@ using System.Runtime.Serialization;
 
 namespace NetCheckApp
 {
+    struct Thetra
+    {
+        int[] data;
+        public int mat;
+        public Thetra(int _a, int _b, int _c, int _d, int _m)
+        {
+            data = new int[4];
+            data[0] = _a;
+            data[1] = _a;
+            data[2] = _a;
+            data[3] = _a;
+            mat = _m;
+        }
+
+        public int this[int x]
+        {
+            get => data[x];
+        }
+    }
     public struct Vector3D : IEquatable<Vector3D>
     {
         public static readonly Vector3D Zero = new Vector3D(0, 0, 0);
@@ -183,5 +202,4 @@ namespace NetCheckApp
 
         #endregion
     }
-
 }

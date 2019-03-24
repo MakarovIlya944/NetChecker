@@ -39,9 +39,12 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DenseMatrix.cs" />
+    <Compile Include="IMatrix.cs" />
     <Compile Include="MatrixGenerator.cs" />
     <Compile Include="NetGenerator.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="SparseMatrix.cs" />
     <Compile Include="TSM.cs" />
     <Compile Include="Vectors.cs" />
   </ItemGroup>

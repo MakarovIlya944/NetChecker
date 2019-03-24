@@ -143,7 +143,7 @@ namespace NetCheckerFEM
                 z[i] = r[i];
             }
             MultMatrix(z, Ax, true);
-            List<double> tttt = new List<double>();
+            var tttt = new List<double>();
             tttt = Ax;
             Ax = p;
             p = tttt;
