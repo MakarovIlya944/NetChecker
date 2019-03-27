@@ -14,15 +14,20 @@ namespace NetCheckApp
         {
             data = new int[4];
             data[0] = _a;
-            data[1] = _a;
-            data[2] = _a;
-            data[3] = _a;
+            data[1] = _b;
+            data[2] = _c;
+            data[3] = _d;
             mat = _m;
         }
 
         public int this[int x]
         {
             get => data[x];
+        }
+
+        public override string ToString()
+        {
+            return $"{data[0]} {data[1]} {data[2]} {data[3]} | {mat}";
         }
     }
     public struct Vector3D : IEquatable<Vector3D>

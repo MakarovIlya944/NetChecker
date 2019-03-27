@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,12 +13,14 @@ namespace NetCheckerFEM
         List<Vector3D> points;
         List<Thetra> thetras;
         DenseMatrix LocalMatrix = new DenseMatrix(4, 4);
-        SparseMatrix GlobalMatrix;
+        public SparseMatrix GlobalMatrix;
+        public List<double> RightPart;
 
         public MatrixGenerator(List<Vector3D> _vector3s, List<Thetra> _thetras)
         {
             points = _vector3s;
             thetras = _thetras;
+            GlobalMatrix = new SparseMatrix(_vector3s.Count, _thetras);
         }
 
         double Material(int mat)
@@ -54,7 +57,30 @@ namespace NetCheckerFEM
 
         public void Save(string name)
         {
+            string path = AppDomain.CurrentDomain.BaseDirectory;
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "kuslau.txt")))
+            {
+                int maxiter = 10000;
+                double eps = 1e-13;
+                sw.Write($"{points.Count} {maxiter} {eps}");
+            }
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "x.txt")))
+                sw.Write(Enumerable.Range(0, points.Count).Select(x => "1 ").Aggregate((x, y) => x += y));
 
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "pr.txt")))
+                sw.Write(RightPart.Select(x => x.ToString() + " ").Aggregate((x, y) => x += y));
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "di.txt")))
+                sw.Write(GlobalMatrix.Diagonal.Select(x => x.ToString()).Aggregate((x, y) => x += y));
+
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "ig.txt")))
+                sw.Write(GlobalMatrix.Ig.Select(x => x.ToString()).Aggregate((x, y) => x += y));
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "jg.txt")))
+                sw.Write(GlobalMatrix.Jg.Select(x => x.ToString()).Aggregate((x, y) => x += y));
+
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "ggl.txt")))
+                sw.Write(GlobalMatrix.Ggl.Select(x => x.ToString()).Aggregate((x, y) => x += y));
+            using (StreamWriter sw = new StreamWriter(Path.Combine(path, "ggu.txt")))
+                sw.Write(GlobalMatrix.Ggu.Select(x => x.ToString()).Aggregate((x, y) => x += y));
         }
     }
 }

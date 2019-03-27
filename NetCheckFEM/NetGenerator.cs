@@ -13,12 +13,12 @@ namespace NetCheckerFEM
         List<Vector3D> points = new List<Vector3D>();
         List<Thetra> thetras = new List<Thetra>();
 
-        public NetGenerator()
+        public NetGenerator(string path)
         {
-
+            Load(path);
         }
 
-        public void Load(string path)
+        void Load(string path)
         {
             using (System.IO.StreamReader file = new System.IO.StreamReader(path))
             {
