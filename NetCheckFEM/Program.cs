@@ -10,6 +10,7 @@ namespace NetCheckerFEM
     {
         static void Main()
         {
+            
             //NetGenerator a = new NetGenerator();
             //a.Load(@"C:\Work\GMesh\cube.msh");
             double[,] data = new double[3, 3] { { 1, 2, 3}, { 4, 5 ,6 }, { 7, 2, 1 } };
