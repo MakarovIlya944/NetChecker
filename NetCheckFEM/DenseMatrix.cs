@@ -81,9 +81,9 @@ namespace NetCheckerFEM
                     X[k, i] = (B[k, i] - sum) / a[k, k];
                 }
 
-            Det = 1;
+            X.Det = 1;
             for (int i = 0; i < n; i++)
-                Det *= a[i, i];
+                X.Det *= a[i, i];
             return X;
         }
 

@@ -33,15 +33,20 @@ namespace NetCheckerFEM
                 if (x == y)
                     return di[x];
 
+                int isUp = 0;
+                if(x < y)
+                {
+                    isUp = x;
+                    x = y;
+                    y = isUp;
+                    isUp = 1;
+                }
                 int i = ig[x];
-                for (int n = ig[x + 1] + 1; i < n && jg[i - ig[x]] != y; i++) ;
-                if (i == ig[x + 1] - ig[x] + 1)
+                for (int n = ig[x + 1] + 1; i < n && jg[i] != y; i++) ;
+                if (i == ig[x + 1] + 1)
                     throw new Exception("Not found");
 
-                if (x < y)
-                    return data[1][i];
-                else
-                    return data[0][i];
+                return data[isUp][i];
             }
             set
             {
@@ -49,16 +54,23 @@ namespace NetCheckerFEM
                     throw new Exception("Not found");
                 if (x == y)
                     di[x] = value;
-
-                int i = ig[x];
-                for (int n = ig[x + 1] + 1; i < n && jg[i - ig[x]] != y; i++) ;
-                if (i == ig[x + 1] - ig[x] + 1)
-                    throw new Exception("Not found");
-
-                if (x < y)
-                    data[1][i] = value;
                 else
-                    data[0][i] = value;
+                {
+                    int isUp = 0;
+                    if (x < y)
+                    {
+                        isUp = x;
+                        x = y;
+                        y = isUp;
+                        isUp = 1;
+                    }
+                    int i = ig[x];
+                    for (int n = ig[x + 1] + 1; i < n && jg[i] != y; i++) ;
+                    if (i == ig[x + 1] + 1)
+                        throw new Exception("Not found");
+
+                    data[isUp][i] = value;
+                }
             }
         }
 
@@ -73,6 +85,7 @@ namespace NetCheckerFEM
 
         public SparseMatrix(int num, List<Thetra> thetras)
         {
+            dim = num;
             HashSet<int>[] edges = new HashSet<int>[num];
             for(int i = 0;i<num;i++)
                 edges[i] = new HashSet<int>();
@@ -83,10 +96,11 @@ namespace NetCheckerFEM
             int nJg = 0;
             ig = new int[num + 1];
             ig[0] = 0;
-            for (int i = 1; i < num; i++)
+            ig[1] = 0;
+            for (int i = 2; i <= num; i++)
             {
-                ig[i] = ig[i - 1] + edges[i].Count;
-                nJg += edges[i].Count;
+                ig[i] = ig[i - 1] + edges[i-1].Count;
+                nJg += edges[i-1].Count;
             }
             jg = new int[nJg];
             for (int i=0, k=0; i < num; i++)
@@ -95,6 +109,7 @@ namespace NetCheckerFEM
             data = new double[2][];
             data[0] = new double[nJg];
             data[1] = new double[nJg];
+            di = new double[num];
         }
 
         public void Add(bool isUpperTriangle, double d)

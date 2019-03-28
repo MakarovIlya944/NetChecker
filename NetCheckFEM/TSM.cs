@@ -15,22 +15,22 @@ namespace NetCheckerFEM
         int n, maxiter, iter;
         double eps;
 
-        List<double> gglLU, gguLU, diLU;
-        List<double> gglA, gguA, diA;
-        List<double> diD;
-        List<int> ig, jg;
+        double[] gglLU, gguLU, diLU;
+        double[] gglA, gguA, diA;
+        double[] diD;
+        int[] ig, jg;
 
-        List<double> r, z, x, p, pr, Ax, Ay, x0;
+        double[] r, z, x, p, pr, Ax, Ay, x0;
 
 	    //c=b-a
-	    public void sub(List<double> a, List<double> b, List<double> c)
+	    public void sub(double[] a, double[] b, double[] c)
         {
             for (int i = 0; i < n; i++)
                 c[i] = b[i] - a[i];
         }
 
         //return (a,b)
-        public double scalar(List<double> a, List<double> b)
+        public double scalar(double[] a, double[] b)
         {
             double ans = 0;
             for (int i=0; i < n; i++)
@@ -39,71 +39,72 @@ namespace NetCheckerFEM
         }
 
         //d=a+b*c
-        public void addmult(List<double> a, double b, List<double> c, List<double> d)
+        public void addmult(double[] a, double b, double[] c, double[] d)
         {
             for (int i = 0; i < n; i++)
                 d[i] = a[i] + b * c[i];
         }
 
-        public List<double> GetAnswer()
+        public double[] GetAnswer()
         {
             return x;
         }
 
         public void Load()
         {
-            string line;
+            string[] line;
             string path = AppDomain.CurrentDomain.BaseDirectory;
             StreamReader file = new StreamReader(Path.Combine(path, "kuslau.txt"));
-            line = file.ReadLine();
-            n = Int32.Parse(line);
-            maxiter = Int32.Parse(line);
-            eps = Double.Parse(line);
+            line = file.ReadLine().Split(' ');
+            n = Int32.Parse(line[0]);
+            maxiter = Int32.Parse(line[1]);
+            eps = Double.Parse(line[2]);
 
-            diLU = new List<double>(n) { };
-            diA = new List<double>(n) { };
-            diD = new List<double>(n) { };
-            ig = new List<int>(n + 1) { };
-            pr = new List<double>(n) { };
-            r = new List<double>(n) { };
-            z = new List<double>(n) { };
-            x = new List<double>(n) { };
-            p = new List<double>(n) { };
-            Ax = new List<double>(n) { };
-            Ay = new List<double>(n) { };
-            x0 = new List<double>(n) { };
+            diLU = new double[n];
+            diA = new double[n];
+            diD = new double[n];
+            ig = new int[n + 1];
+            pr = new double[n];
+            r = new double[n];
+            z = new double[n];
+            x = new double[n];
+            p = new double[n];
+            Ax = new double[n];
+            Ay = new double[n];
+            x0 = new double[n];
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "x.txt")))
             {
-                x0 = sr.ReadToEnd().Split('\n').Select(x => Double.Parse(x)).ToList();
-                x = x0.ToList();
+                //var qw = sr.ReadToEnd().Split('\n');
+                x0 = sr.ReadToEnd().Split('\n').Take(n).Select(x => Double.Parse(x)).ToArray();
+                x = x0.ToArray();
             }
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "pr.txt")))
-                pr = sr.ReadToEnd().Split('\n').Select(x => Double.Parse(x)).ToList();
+                pr = sr.ReadToEnd().Split('\n').Take(n).Select(x => Double.Parse(x)).ToArray();
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "di.txt")))
-                diA = sr.ReadToEnd().Split('\n').Select(x => Double.Parse(x)).ToList();
+                diA = sr.ReadToEnd().Split('\n').Take(n).Select(x => Double.Parse(x)).ToArray();
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "ig.txt")))
-                ig = sr.ReadToEnd().Split('\n').Select(x => Int32.Parse(x)).ToList();
+                ig = sr.ReadToEnd().Split('\n').Take(n+1).Select(x => Int32.Parse(x)).ToArray();
 
 
             int tmp = ig[n];
-            jg = new List<int>(tmp);
-            gglA = new List<double>(tmp) { };
-            gguA = new List<double>(tmp) { };
-            gglLU = new List<double>(tmp) { };
-            gguLU = new List<double>(tmp) { };
+            jg = new int[tmp];
+            gglA = new double[tmp];
+            gguA = new double[tmp];
+            gglLU = new double[tmp];
+            gguLU = new double[tmp];
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "jg.txt")))
-                jg = sr.ReadToEnd().Split('\n').Select(x => Int32.Parse(x)).ToList();
+                jg = sr.ReadToEnd().Split('\n').Take(ig[n]).Select(x => Int32.Parse(x)).ToArray();
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "ggl.txt")))
-                gglA = sr.ReadToEnd().Split('\n').Select(x => Double.Parse(x)).ToList();
+                gglA = sr.ReadToEnd().Split('\n').Take(ig[n]).Select(x => Double.Parse(x)).ToArray();
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "ggu.txt")))
-                gguA = sr.ReadToEnd().Split('\n').Select(x => Double.Parse(x)).ToList();
+                gguA = sr.ReadToEnd().Split('\n').Take(ig[n]).Select(x => Double.Parse(x)).ToArray();
         }
 
 
@@ -115,7 +116,7 @@ namespace NetCheckerFEM
 
         //Ax = y умножение в разряженном формате
         //y - можно любой
-        public void MultMatrix(List<double> x, List<double> y, bool f)
+        public void MultMatrix(double[] x, double[] y, bool f)
         {
             if (f)
             {
@@ -143,7 +144,7 @@ namespace NetCheckerFEM
                 z[i] = r[i];
             }
             MultMatrix(z, Ax, true);
-            var tttt = new List<double>();
+            var tttt = new double[x.Length];
             tttt = Ax;
             Ax = p;
             p = tttt;
@@ -248,7 +249,7 @@ namespace NetCheckerFEM
 
         //Uy = x решение слау
         //н - любой
-        public void SLAEU(List<double> x, List<double> y)
+        public void SLAEU(double[] x, double[] y)
         {
             for (int i = 0; i < n; i++) y[i] = x[i];
             for (int i = n - 1; i >= 0; i--)
@@ -263,7 +264,7 @@ namespace NetCheckerFEM
 
         //Ly = x решение слау
         //y - любой
-        public void SLAEL(List<double> x, List<double> y)
+        public void SLAEL(double[] x, double[] y)
         {
             double sum;
             for (int i = 0; i < n; i++)
