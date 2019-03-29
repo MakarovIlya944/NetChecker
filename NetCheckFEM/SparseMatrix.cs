@@ -112,6 +112,38 @@ namespace NetCheckerFEM
             di = new double[num];
         }
 
+        public void ZeroRow(int p)
+        {
+            int ibeg, iend;
+            bool flag = true;
+            ibeg = p!=0 ? ig[p - 1] : 0;
+            iend = ig[p];
+            for (int i= ibeg, n = iend; i < n; i++)
+                data[0][i] = 0;
+
+            for (int i=p + 1, n=dim, tmp = -1, ind; i < n; i++)
+            {
+                iend = ig[i];
+                ibeg = ig[i - 1];
+                if (jg[iend - 1] < p || jg[ibeg] > p)
+                    continue;
+                while (jg[ibeg] != p && flag)//binary find
+                {
+                    ind = ((ibeg + iend) % 2)!=0 ? (ibeg + iend) / 2 + 1 : (ibeg + iend) / 2;
+                    flag = ind != tmp;
+                    if (jg[ind] <= p)
+                        ibeg = ind;
+                    else
+                        iend = ind;
+                    tmp = ind;
+                }
+                if (flag)//если нашли индекс в ibeg
+                    data[1][ibeg] = 0;
+                else
+                    flag = true;
+            }
+        }
+
         public void Add(bool isUpperTriangle, double d)
         {
             if (curElem > dim)

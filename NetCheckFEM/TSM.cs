@@ -98,17 +98,17 @@ namespace NetCheckerFEM
             gguLU = new double[tmp];
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "jg.txt")))
-                jg = sr.ReadToEnd().Split('\n').Take(ig[n]).Select(x => Int32.Parse(x)).ToArray();
+                jg = sr.ReadToEnd().Split('\n').Take(tmp).Select(x => Int32.Parse(x)).ToArray();
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "ggl.txt")))
-                gglA = sr.ReadToEnd().Split('\n').Take(ig[n]).Select(x => Double.Parse(x)).ToArray();
+                gglA = sr.ReadToEnd().Split('\n').Take(tmp).Select(x => Double.Parse(x)).ToArray();
 
             using (StreamReader sr = new StreamReader(Path.Combine(path, "ggu.txt")))
-                gguA = sr.ReadToEnd().Split('\n').Take(ig[n]).Select(x => Double.Parse(x)).ToArray();
+                gguA = sr.ReadToEnd().Split('\n').Take(tmp).Select(x => Double.Parse(x)).ToArray();
         }
 
 
-        void Save(string path)
+        public void Save(string path)
         {
             using (StreamWriter sr = new StreamWriter(path))
                 sr.Write(x.Select(a => a.ToString()).Aggregate((x, y) => x + Environment.NewLine + y));
@@ -326,5 +326,53 @@ namespace NetCheckerFEM
             for (int i = 0; i < n; i++)
                 x[i] = x0[i];
         }
+
+        public bool TestLU()
+        {
+            n = 4;
+            maxiter = 1000;
+            eps = 1E-9;
+
+            diLU = new double[n];
+            diA = new double[n];
+            diD = new double[n];
+            ig = new int[n + 1];
+            pr = new double[n];
+            r = new double[n];
+            z = new double[n];
+            x = new double[n];
+            p = new double[n];
+            Ax = new double[n];
+            Ay = new double[n];
+            x0 = new double[n];
+
+            ig = "0 0 1 2 5".Split(' ').Select(x => Int32.Parse(x)).ToArray();
+
+            int tmp = ig[n];
+            jg = new int[tmp];
+            gglA = new double[tmp];
+            gguA = new double[tmp];
+            gglLU = new double[tmp];
+            gguLU = new double[tmp];
+
+            jg = "0 1 0 1 2".Split(' ').Select(x => Int32.Parse(x)).ToArray();
+            pr = "-32 215 29 92".Split(' ').Select(x => Double.Parse(x)).ToArray();
+            diA = "64 43 21 20".Split(' ').Select(x => Double.Parse(x)).ToArray();
+            gglA = "-24 7 16 4 -4".Split(' ').Select(x => Double.Parse(x)).ToArray();
+            gguA = "16 35 -32 12 -12".Split(' ').Select(x => Double.Parse(x)).ToArray();
+
+            FactorLU();
+            SolveLU();
+
+            double[] answer = new double[n];
+            answer = "1 2 3 4".Split(' ').Select(x => Double.Parse(x)).ToArray();
+
+            for (int i = 0; i < n; i++)
+                if (Math.Abs(answer[i] - x[i]) > eps)
+                    return false;
+
+            return true;
+        }
+
     };
 }

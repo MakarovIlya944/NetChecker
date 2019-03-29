@@ -26,6 +26,11 @@ namespace NetCheckerFEM
         Func<double, double, double,int, double> FunctionRightPart;
         Func<int, double> Material;
 
+        #region Solver params
+        int maxiter = 10000;
+        double eps = 1E-14;
+        #endregion
+
         public MatrixGenerator(List<Vector3D> _vector3s, List<Thetra> _thetras, Func<double, double, double, int, double> rightpart, Func<int, double> mat)
         {
             points = _vector3s;
@@ -73,15 +78,25 @@ namespace NetCheckerFEM
             }
         }
 
+        public void AccountMainCondition(List<int> b_points, Func<double, double, double, double> bound)
+        {
+            double cond;
+            foreach (int p in b_points)
+            {
+                cond = bound(points[p].X, points[p].Y, points[p].Z);
+                GlobalMatrix[p,p] = 1;
+                RightPart[p] = cond;
+                
+
+            }
+        }
+
         public void Save()
         {
             string path = AppDomain.CurrentDomain.BaseDirectory;
             using (StreamWriter sw = new StreamWriter(Path.Combine(path, "kuslau.txt")))
-            {
-                int maxiter = 10000;
-                double eps = 1e-13;
                 sw.Write($"{points.Count} {maxiter} {eps}");
-            }
+
             using (StreamWriter sw = new StreamWriter(Path.Combine(path, "x.txt")))
                 sw.Write(Enumerable.Range(0, points.Count).Select(x => "1\n").Aggregate((x, y) => x += y));
 
