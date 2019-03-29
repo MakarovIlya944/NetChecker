@@ -42,7 +42,23 @@ namespace NetCheckerFEM
                 for(int j=0;j<y;j++)
                     data[i,j] = d[i, j];
         }
+        
+        double GetDet()
+        {
+        n=dimX;
+        double det=0;
+        for(int i =0;i<n;i++)
+        {
+        det+=
+        }
+        
+        
+        }
+        
+void Reverse2()
+{
 
+}
         public IMatrix ReverseMatrix()
         {
             if (dimX != dimY)
