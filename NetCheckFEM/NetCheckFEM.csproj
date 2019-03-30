@@ -44,9 +44,13 @@
     <Compile Include="MatrixGenerator.cs" />
     <Compile Include="NetGenerator.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Solve.cs" />
     <Compile Include="SparseMatrix.cs" />
     <Compile Include="TSM.cs" />
     <Compile Include="Vectors.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

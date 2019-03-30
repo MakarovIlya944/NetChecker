@@ -45,25 +45,76 @@ namespace NetCheckerFEM
 
         double GetDet()
         {
-            int[][] switches;
-            int n, m;
             if (dimX != dimY)
                 throw new Exception("Matrix not squad");
-            if (dimX == 1)
+            return GetDet(Enumerable.Range(0, dimX).ToArray(), Enumerable.Range(0, dimX).ToArray(), dimX);
+        }
+
+        double GetDet(int[] X, int[] Y, int m)
+        {
+            int[,] switches;
+            int n;
+            if (m == 1)
                 return data[0, 0];
-            else if (dimX == 2)
-            { switches = new int[2][]; n = 2; }
-            else if (dimX == 3)
-            { switches = new int[6][]; n = 6; }
-            else if (dimX == 4)
-            { switches = new int[120][]; n = 120; }
+            else if (m == 2)
+            {
+                switches = new int[2, 3] {
+                    {0,1,1},
+                    {1,0,-1} };
+                n = 2;
+            }
+            else if (m == 3)
+            {
+                switches = new int[6, 4] {
+                    {0,1,2,1},
+                    {0,2,1,-1},
+                    {1,0,2,-1},
+                    {1,2,0,1},
+                    {2,0,1,1},
+                    {2,1,0,-1}
+                };
+                n = 6;
+            }
+            else if (m == 4)
+            {
+                switches = new int[24, 5] {
+                    {0,1,2,3,1},
+                    {0,1,3,2,-1},
+                    {0,2,1,3,-1},
+                    {0,2,3,1,1},
+                    {0,3,1,2,1},
+                    {0,3,2,1,-1},
+                    {1,0,2,3,-1},
+                    {1,0,3,2,1},
+                    {1,2,0,3,1},
+                    {1,2,3,0,-1},
+                    {1,3,0,2,-1},
+                    {1,3,2,0,1},
+                    {2,0,1,3,1},
+                    {2,0,3,1,-1},
+                    {2,1,0,3,-1},
+                    {2,1,3,0,1},
+                    {2,3,0,1,1},
+                    {2,3,1,0,-1},
+                    {3,0,1,2,-1},
+                    {3,0,2,1,1},
+                    {3,1,0,2,1},
+                    {3,1,2,0,-1},
+                    {3,2,0,1,-1},
+                    {3,2,1,0,1}
+                };
+                n = 24;
+            }
             else
                 throw new Exception("Not implemented dimension");
-            
-            double det = 0;
+            double det = 0, tmp;
             for (int i = 0; i < n; i++)
-                for (int j = 0; j < dimX; j++)
-                    det += data[j,switches[i][j]] * switches[i][dimX];
+            {
+                tmp = 1;
+                for (int j = 0; j < m; j++)
+                    tmp *= data[X[j], Y[switches[i, j]]];
+                det += tmp * switches[i, m];
+            }
 
             return det;
         }
@@ -75,14 +126,13 @@ namespace NetCheckerFEM
             if(dimX < 1 || dimX > 5)
                 throw new Exception("Not implemented dimension");
 
-            double det = 0;
-            Enumerable.Range(0,dimX).
+            int[] X = Enumerable.Range(0, dimX).Where(x => x != k).ToArray();
+            int[] Y = Enumerable.Range(0, dimX).Where(x => x != l).ToArray();
 
-
-            return det;
+            return GetDet(X, Y, dimX-1);
         }
 
-        IMatrix ReverseDefault()
+        public IMatrix ReverseDefault()
         {
             if (dimX != dimY)
                 throw new Exception("Matrix not squad");
@@ -91,7 +141,8 @@ namespace NetCheckerFEM
             DenseMatrix X = new DenseMatrix(dimX, dimX);
             for (int i = 0; i < 4; i++)
                 for (int j = 0; j < 4; j++)
-                    X.data[i, j] = (((i + j) & 1) == 0 ? 1 : -1) * MinorDet(i, j) / Det;
+                    X.data[j, i] = (((i + j) & 1) == 0 ? 1 : -1) * MinorDet(i, j) / Math.Abs(Det);
+            X.Det = Det;
             return X;
         }
 
@@ -104,24 +155,33 @@ namespace NetCheckerFEM
             for (int i = 0; i < n; i++)
                 for (int j = 0; j < n; j++)
                     a[i, j] = data[i, j];
-
-            var X = new DenseMatrix(n, n);
             DenseMatrix B = (DenseMatrix)DiagonalMatrix(n, 1);
 
-            for (int k = 0; k < n - 1; k++)
-                for (int i = k + 1; i < n; i++)
-                {
-                    if (Math.Abs(a[k, k]) < 1e-14)
-                        throw new Exception("Degenerate matrix");
-                    double t = a[i, k] / a[k, k];
-                    for (int j = 0; j <= k; j++)
-                        B[i, j] -= t * B[k, j];
-                    for (int j = k+1; j < n; j++)
+            try
+            {
+
+                for (int k = 0; k < n - 1; k++)
+                    for (int i = k + 1; i < n; i++)
                     {
-                        B[i, j] -= t * B[k, j];
-                        a[i, j] -= t * a[k, j];
+                        if (Math.Abs(a[k, k]) < 1e-14)
+                            throw new Exception("Degenerate matrix");
+                        double t = a[i, k] / a[k, k];
+                        for (int j = 0; j <= k; j++)
+                            B[i, j] -= t * B[k, j];
+                        for (int j = k + 1; j < n; j++)
+                        {
+                            B[i, j] -= t * B[k, j];
+                            a[i, j] -= t * a[k, j];
+                        }
                     }
-                }
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Degenerate matrix")
+                    return ReverseDefault();
+            }
+
+            var X = new DenseMatrix(n, n);
             for (int i = 0; i < n; i++)
                 X[n - 1, i] = B[n - 1, i] / a[n - 1, n - 1];
             for (int k = n - 2; k >= 0; k--)

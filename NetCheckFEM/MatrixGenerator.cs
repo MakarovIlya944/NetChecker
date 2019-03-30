@@ -10,25 +10,43 @@ namespace NetCheckerFEM
 { 
     class MatrixGenerator
     {
+        #region Input data
         List<Vector3D> points;
         List<Thetra> thetras;
+        #endregion
+
+        #region Local data
         DenseMatrix LocalMatrix = new DenseMatrix(4, 4);
         double[] LocalRightPart = new double[4];
         double[,] LocalM = new double[4, 4]
         {
-            { 0.01666,0.00833,0.00833,0.00833},
-            { 0.00833,0.01666,0.00833,0.00833},
-            { 0.00833,0.00833,0.01666,0.00833},
-            { 0.00833,0.00833,0.00833,0.01666}
+            { 2,1,1,1},
+            { 1,2,1,1},
+            { 1,1,2,1},
+            { 1,1,1,2}
         };
+        //{
+        //    { 0.01666,0.00833,0.00833,0.00833},
+        //    { 0.00833,0.01666,0.00833,0.00833},
+        //    { 0.00833,0.00833,0.01666,0.00833},
+        //    { 0.00833,0.00833,0.00833,0.01666}
+        //};
+        #endregion
+
+        #region Global data
         public SparseMatrix GlobalMatrix;
         public double[] RightPart;
-        Func<double, double, double,int, double> FunctionRightPart;
-        Func<int, double> Material;
+        public Func<double, double, double, int, double> FunctionRightPart;
+        public Func<int, double> Material;
+        #endregion
 
         #region Solver params
         int maxiter = 10000;
         double eps = 1E-14;
+        #endregion
+
+        #region Basis coefficients
+        double[,] koefs;
         #endregion
 
         public MatrixGenerator(List<Vector3D> _vector3s, List<Thetra> _thetras, Func<double, double, double, int, double> rightpart, Func<int, double> mat)
@@ -39,6 +57,7 @@ namespace NetCheckerFEM
             FunctionRightPart = rightpart;
             Material = mat;
             RightPart = new double[_vector3s.Count];
+            koefs = new double[_vector3s.Count,4];
         }
         
         void MakeLocalMatrix(Thetra t)
@@ -57,14 +76,16 @@ namespace NetCheckerFEM
                 LocalRightPart[i] = 0;
                 for (int j = 0; j < 4; j++)
                 {
-                    LocalMatrix[i, j] = lambda * Math.Abs(a.Det) / 6 * (a[i, 1] * a[j, 1] + a[i, 2] * a[j, 2] + a[i, 3] * a[j, 3]);
-                    LocalRightPart[i] += LocalM[i, j] * FunctionRightPart(points[t[0]].X, points[t[0]].Y, points[t[0]].Z, t.mat);
+                    LocalMatrix[i, j] = lambda * Math.Abs(a.Det) / 6.0 * (a[i, 1] * a[j, 1] + a[i, 2] * a[j, 2] + a[i, 3] * a[j, 3]);
+                    LocalRightPart[i] += LocalM[i, j] * FunctionRightPart(points[t[j]].X, points[t[j]].Y, points[t[j]].Z, t.mat);
+
+                    koefs[t[i], j] = a[i, j];
                 }
-                LocalRightPart[i] *= Math.Abs(a.Det);
+                LocalRightPart[i] *= Math.Abs(a.Det) / 24.0 / 2.5;
             }
         }
 
-        public void CollectGlobalMatrix()
+        public double[,] CollectGlobalMatrix()
         {
             foreach (Thetra item in thetras)
             {
@@ -73,21 +94,19 @@ namespace NetCheckerFEM
                 {
                     for (int k = 0; k < 4; k++)
                         GlobalMatrix[item[j], item[k]] += LocalMatrix[j, k];
-                    RightPart[item[j]] = LocalRightPart[j];
+                    RightPart[item[j]] += LocalRightPart[j];
                 }
             }
+            return koefs;
         }
 
         public void AccountMainCondition(List<int> b_points, Func<double, double, double, double> bound)
         {
-            double cond;
             foreach (int p in b_points)
             {
-                cond = bound(points[p].X, points[p].Y, points[p].Z);
                 GlobalMatrix[p,p] = 1;
-                RightPart[p] = cond;
-                
-
+                RightPart[p] = bound(points[p].X, points[p].Y, points[p].Z);
+                GlobalMatrix.ZeroRow(p);
             }
         }
 

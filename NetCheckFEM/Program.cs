@@ -1,6 +1,7 @@
 ﻿using NetCheckApp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,16 +12,16 @@ namespace NetCheckerFEM
     {
         static void Main()
         {
-            List<Vector3D> b = new List<Vector3D>(9)
+            List<Vector3D> p = new List<Vector3D>(9)
             {
+new Vector3D(0,0,0),
 new Vector3D(1,0,0),
-new Vector3D(2,1,0),
+new Vector3D(0,1,0),
 new Vector3D(1,1,0),
-new Vector3D(2,2,0),
-new Vector3D(0,0,3),
-new Vector3D(1,1,3),
-new Vector3D(0,1,3),
-new Vector3D(1,2,3),
+new Vector3D(0,0,1),
+new Vector3D(1,0,1),
+new Vector3D(0,1,1),
+new Vector3D(1,1,1),
 new Vector3D(0.5,0.5,0.5)
             };
             List<Thetra> t = new List<Thetra>(12) {
@@ -45,25 +46,27 @@ new Thetra(5,6,7,8,0)
 
             Func<double, double, double, int, double> f = (double x, double y, double z, int mat)=>
             {
-                return -6*m(mat);
+                return 0*m(mat);
             };
 
             Func<double, double, double, double> bound = (double x, double y, double z) =>
             {
-                return x*x+y*y+z*z;
+                return x+y+z;
             };
+            List<int> borderPoints = new List<int>() {0,1,2,3,4,5,6,7 };
 
-            //NetGenerator n = new NetGenerator("ok.txt");
-            
-            MatrixGenerator c = new MatrixGenerator(b, t, f, m);
-            c.CollectGlobalMatrix();
-            c.AccountMainCondition(Enumerable.Range(0,8).ToList(), bound);
+            MatrixGenerator c = new MatrixGenerator(p, t, f, m);
+            double[,] koefs = c.CollectGlobalMatrix();
+            c.AccountMainCondition(borderPoints, bound);
             c.Save();
             LOS L = new LOS();
             L.Load();
             L.FactorLU();
             L.Solve();
             L.Save("ans.txt");
+
+            Solve s = new Solve(p,t,koefs,L.GetAnswer());
+            Console.WriteLine($"{new Vector3D(0,0,0)} {s.U(new Vector3D(0, 0, 0))}");
         }
     }
 }

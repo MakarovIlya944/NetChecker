@@ -103,8 +103,8 @@ namespace NetCheckerFEM
                 nJg += edges[i-1].Count;
             }
             jg = new int[nJg];
-            for (int i=0, k=0; i < num; i++)
-                foreach(int var in edges[i])
+            for (int i = 0, k = 0; i < num; i++)
+                foreach (int var in edges[i].OrderBy(x => x))
                     jg[k++] = var;
             data = new double[2][];
             data[0] = new double[nJg];
@@ -116,20 +116,20 @@ namespace NetCheckerFEM
         {
             int ibeg, iend;
             bool flag = true;
-            ibeg = p!=0 ? ig[p - 1] : 0;
-            iend = ig[p];
+            ibeg = ig[p];
+            iend = ig[p+1];
             for (int i= ibeg, n = iend; i < n; i++)
                 data[0][i] = 0;
 
-            for (int i=p + 1, n=dim, tmp = -1, ind; i < n; i++)
+            for (int i = p + 1, n = dim, tmp = -1, ind; i < n; i++)
             {
-                iend = ig[i];
-                ibeg = ig[i - 1];
-                if (jg[iend - 1] < p || jg[ibeg] > p)
+                iend = ig[i+1];
+                ibeg = ig[i];
+                if ((iend > 0 && jg[iend - 1] < p) || jg[ibeg] > p)
                     continue;
                 while (jg[ibeg] != p && flag)//binary find
                 {
-                    ind = ((ibeg + iend) % 2)!=0 ? (ibeg + iend) / 2 + 1 : (ibeg + iend) / 2;
+                    ind = ((ibeg + iend) % 2) != 0 ? (ibeg + iend) / 2 + 1 : (ibeg + iend) / 2;
                     flag = ind != tmp;
                     if (jg[ind] <= p)
                         ibeg = ind;
