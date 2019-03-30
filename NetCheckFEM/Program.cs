@@ -67,3 +67,23 @@ new Thetra(5,6,7,8,0)
         }
     }
 }
+
+/*Найти определитель: 
+swithes=[120][5]
+A[4][4]
+det=0
+for(i<120)
+for(j<4)
+det+=A[j][switches[i][j]]*switches [i][4]
+
+MinorDet(k,m)
+X=Enumerable.Range(0,4). Expect (x=>x==k)
+Y...
+swithes [6][4]
+foreach(int i in X)
+
+///
+X
+for(i<4)
+for(j<4)
+X[j][i]=(-1)^(i+j)*MinorDet(i,j)/det;*/
