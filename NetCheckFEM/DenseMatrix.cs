@@ -42,27 +42,63 @@ namespace NetCheckerFEM
                 for(int j=0;j<y;j++)
                     data[i,j] = d[i, j];
         }
-        
+
         double GetDet()
         {
-        n=dimX;
-        double det=0;
-        for(int i =0;i<n;i++)
-        {
-        det+=
-        }
-        
-        
-        }
-        
-void Reverse2()
-{
+            int[][] switches;
+            int n, m;
+            if (dimX != dimY)
+                throw new Exception("Matrix not squad");
+            if (dimX == 1)
+                return data[0, 0];
+            else if (dimX == 2)
+            { switches = new int[2][]; n = 2; }
+            else if (dimX == 3)
+            { switches = new int[6][]; n = 6; }
+            else if (dimX == 4)
+            { switches = new int[120][]; n = 120; }
+            else
+                throw new Exception("Not implemented dimension");
+            
+            double det = 0;
+            for (int i = 0; i < n; i++)
+                for (int j = 0; j < dimX; j++)
+                    det += data[j,switches[i][j]] * switches[i][dimX];
 
-}
+            return det;
+        }
+        
+        double MinorDet(int k, int l)
+        {
+            if (dimX != dimY)
+                throw new Exception("Matrix not squad");
+            if(dimX < 1 || dimX > 5)
+                throw new Exception("Not implemented dimension");
+
+            double det = 0;
+            Enumerable.Range(0,dimX).
+
+
+            return det;
+        }
+
+        IMatrix ReverseDefault()
+        {
+            if (dimX != dimY)
+                throw new Exception("Matrix not squad");
+            Det = GetDet();
+
+            DenseMatrix X = new DenseMatrix(dimX, dimX);
+            for (int i = 0; i < 4; i++)
+                for (int j = 0; j < 4; j++)
+                    X.data[i, j] = (((i + j) & 1) == 0 ? 1 : -1) * MinorDet(i, j) / Det;
+            return X;
+        }
+
         public IMatrix ReverseMatrix()
         {
             if (dimX != dimY)
-                return null;
+                throw new Exception("Matrix not squad");
             int n = dimX;
             var a = new double[n, n];
             for (int i = 0; i < n; i++)
