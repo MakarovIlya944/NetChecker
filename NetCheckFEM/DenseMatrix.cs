@@ -137,6 +137,8 @@ namespace NetCheckerFEM
             if (dimX != dimY)
                 throw new Exception("Matrix not squad");
             Det = GetDet();
+            if (Math.Abs(Det) < 1E-10)
+                throw new Exception("Degenerate matrix");
 
             DenseMatrix X = new DenseMatrix(dimX, dimX);
             for (int i = 0; i < 4; i++)

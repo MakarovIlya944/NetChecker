@@ -12,7 +12,7 @@ namespace NetCheckerFEM
     {
         static void Main()
         {
-            List<Vector3D> p = new List<Vector3D>(9)
+            List<Vector3D> p = new List<Vector3D>(14)
             {
 new Vector3D(0,0,0),
 new Vector3D(1,0,0),
@@ -22,26 +22,46 @@ new Vector3D(0,0,1),
 new Vector3D(1,0,1),
 new Vector3D(0,1,1),
 new Vector3D(1,1,1),
-new Vector3D(0.5,0.5,0.5)
+new Vector3D(0.5,0.5,0.25),
+new Vector3D(0.25,0.5,0.5),
+new Vector3D(0.5,0.25,0.5),
+new Vector3D(0.75,0.5,0.5),
+new Vector3D(0.5,0.75,0.5),
+new Vector3D(0.5,0.5,0.75)
             };
-            List<Thetra> t = new List<Thetra>(12) {
-new Thetra(0,1,4,8,0),
-new Thetra(1,4,5,8,0),
-new Thetra(1,3,5,8,0),
-new Thetra(3,5,7,8,0),
-new Thetra(2,3,7,8,0),
-new Thetra(2,6,7,8,0),
-new Thetra(0,2,4,8,0),
-new Thetra(2,4,6,8,0),
-new Thetra(0,1,2,8,0),
-new Thetra(1,2,3,8,0),
-new Thetra(4,5,6,8,0),
-new Thetra(5,6,7,8,0)
+
+            List<Thetra> t = new List<Thetra>(24) {
+new Thetra(9,10,12,13,0),
+new Thetra(8,9,10,12,0),
+new Thetra(8,10,11,13,0),
+new Thetra(8,11,12,13,0),
+
+new Thetra(0,1,5,10,0),
+new Thetra(0,4,5,10,0),
+new Thetra(1,3,5,11,0),
+new Thetra(3,5,7,11,0),
+new Thetra(2,3,6,12,0),
+new Thetra(3,6,7,12,0),
+new Thetra(0,2,6,9,0),
+new Thetra(0,4,6,9,0),
+new Thetra(0,1,3,8,0),
+new Thetra(0,2,3,8,0),
+new Thetra(4,5,6,13,0),
+new Thetra(5,6,7,13,0),
+
+new Thetra(0,4,9,10,0),
+new Thetra(1,5,10,11,0),
+new Thetra(3,7,11,12,0),
+new Thetra(2,6,9,12,0),
+new Thetra(0,1,8,10,0),
+new Thetra(4,5,10,13,0),
+new Thetra(6,7,12,13,0),
+new Thetra(2,3,8,12,0)
             };
 
             Func<int, double> m = (int mat) =>
             {
-                return 3;
+                return 2;
             };
 
             Func<double, double, double, int, double> f = (double x, double y, double z, int mat)=>
@@ -53,7 +73,7 @@ new Thetra(5,6,7,8,0)
             {
                 return x+y+z;
             };
-            List<int> borderPoints = new List<int>() {0,1,2,3,4,5,6,7 };
+            List<int> borderPoints = new List<int>() {0,1,2,3,4,5,6,7};
 
             MatrixGenerator c = new MatrixGenerator(p, t, f, m);
             double[,] koefs = c.CollectGlobalMatrix();
@@ -64,9 +84,6 @@ new Thetra(5,6,7,8,0)
             L.FactorLU();
             L.Solve();
             L.Save("ans.txt");
-
-            Solve s = new Solve(p,t,koefs,L.GetAnswer());
-            Console.WriteLine($"{new Vector3D(0,0,0)} {s.U(new Vector3D(0, 0, 0))}");
         }
     }
 }

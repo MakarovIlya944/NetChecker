@@ -8,7 +8,7 @@ namespace NetCheckApp
 {
     struct Thetra
     {
-        int[] data;
+        public int[] data;
         public int mat;
         public Thetra(int _a, int _b, int _c, int _d, int _m)
         {
@@ -175,35 +175,6 @@ namespace NetCheckApp
 
         public static Vector3D Max(Vector3D a, Vector3D b) =>
             new Vector3D(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y), Math.Max(a.Z, b.Z));
-
-        #endregion
-
-        #region EqualityComparer
-
-        private class EqualityComparer : IEqualityComparer<Vector3D>
-        {
-            public int Digits { get; set; }
-
-            public bool Equals(Vector3D v1, Vector3D v2)
-            {
-                return v1.Round(Digits) == v2.Round(Digits);
-            }
-
-            public int GetHashCode(Vector3D obj)
-            {
-                return obj.Round(Digits).GetHashCode();
-            }
-        }
-
-        public static IEqualityComparer<Vector3D> CreateComparer(int digits = 7)
-        {
-            return new EqualityComparer { Digits = digits };
-        }
-
-        internal object GetCoords()
-        {
-            throw new NotImplementedException();
-        }
 
         #endregion
     }

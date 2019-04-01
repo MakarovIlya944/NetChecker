@@ -144,6 +144,30 @@ namespace NetCheckerFEM
             }
         }
 
+        public void Print()
+        {
+            int ind = 0;
+            for (int i = 0; i < dim; i++)
+            {
+                Console.Write($"#{i:D2}\t");
+                for (int j = 0; j < i; j++)
+                    if (jg[ind] == j)
+                    { Console.Write($"{Math.Round(data[0][ind],2)} "); ind++; }
+                    else Console.Write("0.00 ");
+                Console.Write($"{Math.Round(di[i], 2)} ");
+                for (int j = i + 1; j < dim; j++)
+                {
+                    int k = ig[j], n = ig[j + 1];
+                    for (; k < n; k++)
+                        if (jg[k] == i)
+                        { Console.Write($"{Math.Round(data[1][k], 2)} "); break; }
+                    if(k==n)
+                        Console.Write("0.00 ");
+                }
+                Console.WriteLine();
+            }
+        }
+
         public void Add(bool isUpperTriangle, double d)
         {
             if (curElem > dim)

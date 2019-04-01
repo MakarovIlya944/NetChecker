@@ -25,12 +25,6 @@ namespace NetCheckerFEM
             { 1,1,2,1},
             { 1,1,1,2}
         };
-        //{
-        //    { 0.01666,0.00833,0.00833,0.00833},
-        //    { 0.00833,0.01666,0.00833,0.00833},
-        //    { 0.00833,0.00833,0.01666,0.00833},
-        //    { 0.00833,0.00833,0.00833,0.01666}
-        //};
         #endregion
 
         #region Global data
@@ -68,7 +62,7 @@ namespace NetCheckerFEM
                {points[t[0]].Y,points[t[1]].Y,points[t[2]].Y,points[t[3]].Y },
                {points[t[0]].Z,points[t[1]].Z,points[t[2]].Z,points[t[3]].Z }
             };
-            DenseMatrix a = (DenseMatrix)(new DenseMatrix(4, 4, data)).ReverseMatrix();
+            DenseMatrix a = (DenseMatrix)(new DenseMatrix(4, 4, data)).ReverseDefault();
             double lambda = Material(t.mat);
 
             for (int i = 0; i < 4; i++)
@@ -81,7 +75,7 @@ namespace NetCheckerFEM
 
                     koefs[t[i], j] = a[i, j];
                 }
-                LocalRightPart[i] *= Math.Abs(a.Det) / 24.0 / 2.5;
+                LocalRightPart[i] *= Math.Abs(a.Det) / 60;
             }
         }
 
@@ -104,7 +98,7 @@ namespace NetCheckerFEM
         {
             foreach (int p in b_points)
             {
-                GlobalMatrix[p,p] = 1;
+                GlobalMatrix[p, p] = 1;
                 RightPart[p] = bound(points[p].X, points[p].Y, points[p].Z);
                 GlobalMatrix.ZeroRow(p);
             }
