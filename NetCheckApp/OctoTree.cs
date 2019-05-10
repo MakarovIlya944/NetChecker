@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace NetCheckApp
 {
@@ -73,6 +70,10 @@ namespace NetCheckApp
         public int FindIndex(Vector3D v)
         {
             return HostArray.FindIndex(x => x == v);
+        }
+
+        public List<Vector3D> ToList() {
+            return HostArray;
         }
 
         private void AddElement(int v, OctoTreeLeaf curLeaf)

@@ -21,7 +21,16 @@ namespace NetCheckApp
             p[1] = mesh[1];
             p[2] = mesh[2];
             p[3] = mesh[3];
-            material = mesh[4];
+            if(mesh.Length == 4)
+                material = mesh[4];
+            else if(mesh.Length == 3)
+                material = -1;
+            else
+                throw new IndexOutOfRangeException();
+        }
+
+        public int this[int x] {
+            get => p[x];
         }
 
         public Thetra(string[] s)
