@@ -2,32 +2,25 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace NetCheckApp
-{
-    public enum CheckerMode
-    {
-        DEFAULT = 1,
-        CONNECT_COMPONENT = 2,
-        VOLUME = 3,
-        FEM = 4
+namespace Core.NetChecker {
+    public enum CheckerMode {
+        КомпонентыСвязности,
+        Объем,
+        МКЭ
     };
 
-    interface ICheckerFabric
-    {
+    interface ICheckerFabric {
         INetChecker Create(CheckerMode type);
     }
 
-    public class CheckerFabric : ICheckerFabric
-    {
+    public class CheckerFabric : ICheckerFabric {
         public INetChecker Create(CheckerMode type) {
             switch(type) {
-                case CheckerMode.DEFAULT:
+                case CheckerMode.КомпонентыСвязности:
                     return new ConnectChecker();
-                case CheckerMode.CONNECT_COMPONENT:
-                    return new ConnectChecker();
-                case CheckerMode.VOLUME:
+                case CheckerMode.Объем:
                     return new VolumeChecker();
-                case CheckerMode.FEM:
+                case CheckerMode.МКЭ:
                     return new FEMChecker();
                 default:
                     return new ConnectChecker();

@@ -1,71 +1,123 @@
-﻿using System;
+﻿using NetCheckerFEM;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Telma;
+using Telma.BaseGraphic;
+using Telma.ProblemBase;
+using Telma.ViewModels;
+using TelmaQuasar;
+using TelmaQuasar.BasisFunction;
+using TelmaQuasar.Core;
+using TelmaQuasar.FEM;
+using TelmaQuasar.Geometry;
+using TelmaQuasar.Problems;
 
-namespace NetCheckApp
-{
-    public class TooCloseException : ApplicationException
-    {
+namespace Core.NetChecker {
+    public class TooCloseException : ApplicationException {
     }
 
-    public class MeshHaventPointException : ApplicationException
-    {
+    public class MeshHaventPointException : ApplicationException {
     }
 
-    public class NetDontExistException : ApplicationException
-    {
+    public class NetDontExistException : ApplicationException {
+        public NetDontExistException(string s) : base(s) { }
     }
 
-    public interface INetChecker
-    {
+    public interface INetChecker {
         bool Load(IMesh3D mesh);
         bool Load(List<Vector3D> net, List<Thetra> thetras);
         bool Check();
     }
 
-    public class FEMChecker : Checker, INetChecker
-    {
+    public class FEMChecker : Checker, INetChecker {
+
         IMesh3D mesh;
+        TaskProperties task;
+        Func<Vector3D, double> u = p => p.X + 2 * p.Y - 2;
+        Func<Vector3D, Vector3D> gradU = p => new Vector3D(1, 2, 0);
+        Func<Vector3D, double> f = p => 0;
+        internal class TestPropertyCollection : IMaterialPropertyCollection {
+            public Dictionary<string, IMaterialProperty> Properties { get; } = new Dictionary<string, IMaterialProperty>();
+            public bool TryGetProperty(string name, out IMaterialProperty property) => Properties.TryGetValue(name, out property);
+        }
+        internal class TestMaterialProperty : IMaterialProperty {
+            public string Name { get; set; }
+            public ICalculator Calculator { get; set; }
+        }
+
         public bool Check() {
+            PrepareHeatProblem();
+            //var mesh = CreateMesh(meshparameter, task.MatCat);
+            var PsiBasisType = BasisFunctionTypes.Lagrange;
+            var PsiBasisOrder = 1;
 
-            //HeatProblem problem = new HeatProblem();
-            //problem.Initialize(mesh,null,"");
-            //problem.Solve();
+            foreach(var elem in mesh.Domains.SelectMany(d => d.GeometryElements).Cast<IScalarFemElement>())
+                elem.SetPsiFunctions(PsiBasisType, PsiBasisOrder);
+            foreach(var elem in mesh.Domains.SelectMany(d => d.Boundary().GeometryElements).Cast<IScalarFemElement>())
+                elem.SetPsiFunctions(PsiBasisType, PsiBasisOrder);
 
-            //Func<int, double> m = (int mat) => {
-            //    return 2;
-            //};
-            //Func<Vector3D, int, double> f = (Vector3D x, int mat) => {
-            //    return 0 * m(mat);
-            //};
-            //Func<Vector3D, double> bound = (Vector3D x) => {
-            //    return x.X + x.Y + x.Z;
-            //};
-            //Func<Vector3D, double> exact = bound; 
+            var problem = new HeatProblem();
 
-            //List<int> borderPoints = new List<int>() { 0, 1, 2, 3, 4, 5, 6, 7 };
+            var path = Guid.NewGuid().ToString();
+            Directory.CreateDirectory(path);
+            problem.Initialize(mesh, task, path);
 
-            //MatrixGenerator c = new MatrixGenerator(tree.ToList(), Figures, f, m);
-            //double[,] koefs = c.CollectGlobalMatrix();
-            //c.AccountMainCondition(borderPoints, bound);
-            //c.Save();
-            //LOS L = new LOS();
-            //L.Load();
-            //L.FactorLU();
-            //L.Solve();
-            //int i = 0;
-            //L.GetAnswer().Any(x => Math.Abs(x - exact(tree[i++])) < eps);
-            return false;
+            problem.Solve();
+            var (l2Error, energyError) = problem.CalculateError(u, gradU);
+            return l2Error < eps;
         }
 
         public bool Load(IMesh3D mesh) {
             this.mesh = mesh;
+            isLoad = true;
             return true;
+        }
+
+        private void PrepareHeatProblem() {
+            task = new TaskProperties(true);
+            var m1 = new CatalogManager.SimpleMaterial() {
+                CatNum = 0,
+                Color = Color.BLUE,
+                IsReserved = false,
+                MaterialType = MaterialTypes.Scalar,
+                Name = "material0",
+            };
+            var coefs = new TestPropertyCollection();
+            m1.Coefs = coefs;
+            coefs.Properties.Add("Lambda", new TestMaterialProperty() { Name = "Lambda", Calculator = Calculator.CreateConst("lambda", 2.0) });
+            coefs.Properties.Add("RoCp", new TestMaterialProperty() { Name = "RoCp", Calculator = Calculator.CreateConst("RoCp", 0.0) });
+            coefs.Properties.Add("Velocity", new TestMaterialProperty() { Name = "Velocity", Calculator = Calculator.CreateConst("Velocity", new Vector3D(0, 0, 0)) });
+            coefs.Properties.Add("F", new TestMaterialProperty() { Name = "F", Calculator = Calculator.CreateCoordDep("f", p => 2 * f(p)) });
+            task.MatCat.Add(m1);
+            var bm = new CatalogManager.SimpleBoundary() {
+                CatNum = 10,
+                Color = Color.BLUE,
+                IsReserved = false,
+                ConditionType = BoundaryTypes.DirichletBoundary,
+                Name = "U"
+            };
+            task.BoundCat.Add(bm);
+            coefs = new TestPropertyCollection();
+            bm.Coefs = coefs;
+            coefs.Properties.Add("Ug", new TestMaterialProperty() { Name = "Ug", Calculator = Calculator.CreateCoordDep("U", u) });
+
+            bm = new CatalogManager.SimpleBoundary() {
+                CatNum = 11,
+                Color = Color.BLUE,
+                IsReserved = false,
+                ConditionType = BoundaryTypes.NeumannBoundary,
+                Name = "Theta"
+            };
+            task.BoundCat.Add(bm);
+            coefs = new TestPropertyCollection();
+            bm.Coefs = coefs;
+            coefs.Properties.Add("Theta", new TestMaterialProperty() { Name = "Theta", Calculator = Calculator.CreateCoordDep("dU/dn", p => -2 * gradU(p) * Vector3D.XAxis) });
         }
     }
 
-    public class VolumeChecker : Checker, INetChecker
-    {
+    public class VolumeChecker : Checker, INetChecker {
         //объем отдельных фигур
         public double FiguresValue = 0;
         //объем общий
@@ -77,9 +129,10 @@ namespace NetCheckApp
         public bool Check() {
             if(isLoad) {
                 MakeThetra();
-                return AllValue() == FiguresValue;
+                return Math.Abs(AllValue() - FiguresValue) < eps;
             } else
-                throw new NetDontExistException();
+                throw new NetDontExistException("VolumeChecker Error: Сетка не задана");
+
         }
 
         private void MakeThetra() {
@@ -87,42 +140,52 @@ namespace NetCheckApp
             //-поиск соседей
             for(int i = 0, neib = 0; i < Figures.Count; i++) {
                 neib = FindNeiborgs(Figures[i]);
-                if(neib == 0)
+                if(neib == 0) {
                     Console.WriteLine($"WARNING! Standalone figure: #{i}");
+                    ContextManager.Context.Logger.Log(LogLevel.Warning, $"WARNING! Standalone figure: #{i}");
+                }
                 if(neib < 4)
                     OutterThetra.Add(i);
                 //-проверка объема
                 V = Value(i);
 #if DEBUG
                 Console.WriteLine($"i: {V}");
+                ContextManager.Context.Logger.Log(LogLevel.Debug, $"i: {V}");
 #endif
-                if(V < eps)
+                if(V < eps) {
                     Console.WriteLine($"WARNING! Value #{i} less then {eps}");
-                else
+                    ContextManager.Context.Logger.Log(LogLevel.Warning, $"i: {V}");
+                } else
                     FiguresValue += V;
             }
         }
 
         private double SurfaceIntegral(int numThetra) {
-            double result = 0, tmp;
+            double result = 0, integral;
             int[] side;
             for(int i = 0; i < 4; i++)
                 if(Figures[numThetra].near[i] == -1) {
                     side = Figures[numThetra].GetSide(i);
                     Vector3D n = Vector3D.Cross(tree[side[1]] - tree[side[0]], tree[side[2]] - tree[side[0]]);
                     Vector3D a = (tree[side[0]] + tree[side[1]] + tree[side[2]]) / 3.0;
-                    tmp = n.X * a.X * n.Norm / 2;
+                    integral = n.X * a.X / 2;
                     a = tree[Figures[numThetra].GetOpposite(i)] - a;
                     if(n * a > -eps)
-                        tmp *= -1;
+                        integral *= -1;
 #if DEBUG
                     Console.WriteLine($"\r\nThetra: {numThetra}\r\nNorm: {n}\r\nA: {a}");
-                    Console.WriteLine($"Int: {tmp}");
+                    Console.WriteLine($"Int: {integral}");
                     Console.WriteLine($"0 :{tree[side[0]]}");
                     Console.WriteLine($"1 :{tree[side[1]]}");
                     Console.WriteLine($"2 :{tree[side[2]]}");
+
+                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"\r\nThetra#: {numThetra}\r\nNorm: {n}");
+                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"Int: {integral}");
+                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"0 :{tree[side[0]]}");
+                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"1 :{tree[side[1]]}");
+                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"2 :{tree[side[2]]}");
 #endif
-                    result += tmp;
+                    result += integral;
                 }
             return result;
         }
@@ -152,24 +215,24 @@ namespace NetCheckApp
         public bool Load(IMesh3D mesh) {
 
             tree = new OctoTree(mesh.Center - new Vector3D(1, 1, 1) * mesh.Radius, mesh.Center + new Vector3D(1, 1, 1) * mesh.Radius);
-            foreach(Vector3D vector in mesh.Vertices) 
+            foreach(Vector3D vector in mesh.Vertices)
                 tree.AddElement(vector);
 
-            Figures = new List<Thetra>();
             foreach(var domain in mesh.AllDomains) {
-                if(!domain.IsExtern && !domain.IsBoundary && domain.GeometryElements[0].Geometry.Metadata.Master.ElementType == ElementType.Tetrahedron)
+                if(domain.GeometryElements.All(x => x.Geometry.Metadata.Master.ElementType == ElementType.Tetrahedron))
                     foreach(var gemobj in domain.GeometryElements) {
                         Figures.Add(new Thetra(gemobj.Geometry.Indices));
                         Figures[Figures.Count - 1].material = domain.MaterialNumber;
                     }
             }
+
             isLoad = true;
+
             return true;
         }
     }
 
-    public class ConnectChecker : Checker, INetChecker
-    {
+    public class ConnectChecker : Checker, INetChecker {
 
         //для поиска односвязности
         private bool[] VisitedVertecies;
@@ -180,41 +243,57 @@ namespace NetCheckApp
 
         public bool Check() {
             if(isLoad) {
-                VisitedVertecies = new bool[tree.Count];
-                VisitedThetra = new bool[Figures.Count];
                 MakeThetra();
                 return ConnectedСomponent();
             } else
-                throw new NetDontExistException();
+                throw new NetDontExistException("ConnectChecker Error: Сетка не задана");
         }
 
         private void MakeThetra() {
             //-поиск соседей
             for(int i = 0, neib = 0; i < Figures.Count; i++) {
                 neib = FindNeiborgs(Figures[i]);
-                if(neib == 0)
+                if(neib == 0) {
                     Console.WriteLine($"WARNING! Standalone figure: #{i}");
+                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"WARNING! Standalone figure: #{i}");
+                }
                 if(neib < 4)
                     OutterThetra.Add(i);
             }
         }
 
+        private int FindFirstOutter() {
+            //int i = 0;
+            //for(; i < Figures.Count && Array.Find(Figures[i].near, x => x == -1) != -1; i++) ;
+            return OutterThetra[0];
+        }
+
+        private int CountOutterVertices() {
+            HashSet<int> o = new HashSet<int>();
+            for(int i = 0; i < Figures.Count; i++)
+                o.UnionWith(_1(i));
+            return o.Count;
+        }
+
         private bool ConnectedСomponent() {
 #if DEBUG
-            int a = dfs(0);
+            int a = dfs(FindFirstOutter());
             bool b = ThetrasMatch();
             Console.WriteLine($"Tree: {tree.Count}");
             Console.WriteLine($"Dfs: {a}");
             Console.WriteLine($"ThetrasMatch: {b}");
-            return tree.Count == a && b;
+            ContextManager.Context.Logger.Log(LogLevel.Debug, $"Tree: {tree.Count}");
+            ContextManager.Context.Logger.Log(LogLevel.Debug, $"Dfs: {a}");
+            ContextManager.Context.Logger.Log(LogLevel.Debug, $"ThetrasMatch: {b}");
+            return CountOutterVertices() == a && b;
 #else
-            return tree.Count == dfs(0) && ThetrasMatch();
+            return CountOutterVertices() == dfs(FindFirstOutter()) && ThetrasMatch();
 #endif
         }
 
         private bool ThetrasMatch() {
             int t = 0;
-            
+
             //if(VisitedThetra[t]) {OutterThetra.Exists(x => x == t)}
             for(; t < VisitedThetra.Length && (VisitedThetra[t] || !OutterThetra.Contains(t)); t++)
                 ;
@@ -229,7 +308,7 @@ namespace NetCheckApp
                     visited++;
                     VisitedVertecies[a] = true;
                     foreach(int b in _T(a)) {
-                        if(!VisitedThetra[b]) {
+                        if(b != -1 && !VisitedThetra[b]) {
                             VisitedThetra[b] = true;
                             visited += dfs(b);
                         }
@@ -239,27 +318,23 @@ namespace NetCheckApp
             return visited;
         }
 
-        //Определяет какие вершины тетраэдра внешние
-        private List<int> _1(int numThetra) {
-            List<int> ans = new List<int>();
-            for(int i = 0, cur = 0; i < 4; i++)
+        /// <summary>
+        /// Определяет какие вершины тетраэдра внешние
+        /// </summary>
+        /// <param name="numThetra">Индекс тетраэдра в Figures</param>
+        /// <returns>Все внешние вершины тетраэдра</returns>
+        private IEnumerable<int> _1(int numThetra) {
+            HashSet<int> ans = new HashSet<int>();
+            for(int i = 0; i < 4; i++)
                 if(Figures[numThetra].near[i] == -1) {
-                    cur = Figures[numThetra].p[i / 3];
-                    if(!ans.Contains(cur))
-                        ans.Add(cur);
-
-                    cur = Figures[numThetra].p[i / 2 + 1];
-                    if(!ans.Contains(cur))
-                        ans.Add(cur);
-
-                    cur = Figures[numThetra].p[(i - 3) / 3 + 3];
-                    if(!ans.Contains(cur))
-                        ans.Add(cur);
+                    ans.Add(Figures[numThetra].p[i / 3]);
+                    ans.Add(Figures[numThetra].p[i / 2 + 1]);
+                    ans.Add(Figures[numThetra].p[(i - 3) / 3 + 3]);
                 }
             return ans;
         }
 
-        //Определяет внешние тетраэдры в которых есть вершина numVert
+        //Определяет внешние тетраэдры в которых есть вершина numVert 
         private List<int> _T(int numVert) {
             List<int> ans = new List<int>();
             bool V, _1;
@@ -279,17 +354,35 @@ namespace NetCheckApp
                 if(_1 && V)
                     ans.Add(i);
             }
-
+            //int i = 0;
+            //foreach(var el in Figures) { if(el.p.Contains(numVert)) ans.Add(i); i++; }
             return ans;
         }
 
         public bool Load(IMesh3D mesh) {
-            throw new NotImplementedException();
+
+            tree = new OctoTree(mesh.Center - new Vector3D(1, 1, 1) * mesh.Radius, mesh.Center + new Vector3D(1, 1, 1) * mesh.Radius);
+            foreach(Vector3D vector in mesh.Vertices)
+                tree.AddElement(vector);
+
+            foreach(var domain in mesh.AllDomains) {
+                if(domain.GeometryElements.All(x => x.Geometry.Metadata.Master.ElementType == ElementType.Tetrahedron))
+                    foreach(var gemobj in domain.GeometryElements) {
+                        Figures.Add(new Thetra(gemobj.Geometry.Indices));
+                        Figures[Figures.Count - 1].material = domain.MaterialNumber;
+                    }
+            }
+
+            VisitedThetra = new bool[Figures.Count];
+            VisitedVertecies = new bool[tree.Count];
+
+            isLoad = true;
+
+            return true;
         }
     }
 
-    public class Checker
-    {
+    public class Checker {
         public List<Thetra> Figures = new List<Thetra>();
         public Dictionary<int, string> Names = new Dictionary<int, string>();
         protected bool isLoad = false;
@@ -301,7 +394,7 @@ namespace NetCheckApp
         public double eps = 1E-4;
         //минимальная дистанция в дереве
         public double dist = 1E-1;
-        
+
         //октодерево вершин
         protected OctoTree tree;
 
@@ -323,12 +416,27 @@ namespace NetCheckApp
             }
             return true;
         }
-        
-        private int PositionNumerSide(IEnumerable<int> a)
-        {
-            if (a.Contains(0))
-                if (a.Contains(1))
-                    if (a.Contains(2))
+
+        public void PrintLog(string filename) {
+            if(!isLoad)
+                return;
+            using(var writer = new StreamWriter(filename)) {
+                writer.WriteLine("a = 1;");
+                int i = 0;
+                foreach(var el in tree)
+                    writer.WriteLine($"Point({i++}) = {{{el.X}, {el.Y}, {el.Z}, a}};");
+                i = 0;
+                foreach(var el in Figures)
+                    for(int j = 0; j < 4; j++)
+                        for(int k = 1; k < 4; k++)
+                            writer.WriteLine($"Line({i++}) = {{{el[j]}, {el[k]}}};");
+            }
+        }
+
+        private int PositionNumerSide(IEnumerable<int> a) {
+            if(a.Contains(0))
+                if(a.Contains(1))
+                    if(a.Contains(2))
                         return 0;
                     else
                         return 1;
@@ -338,27 +446,23 @@ namespace NetCheckApp
         }
 
         //Возвращает кол-во соседей
-        protected int FindNeiborgs(Thetra T)
-        {
+        protected int FindNeiborgs(Thetra T) {
             //поиск соседних тетра
             HashSet<int> finded = new HashSet<int>();
             HashSet<int> looked = new HashSet<int>();
             int nT = Figures.IndexOf(T), nY;
             int i, j;
             int countSide = 0;
-            foreach (Thetra Y in Figures)
-                if (T != Y)
-                {
-                    for (j = 0; j < 4; j++)
-                    {
-                        for (i = 0; i < 4 && Y.p[i] != T.p[j]; i++) ;
-                        if (i != 4)
-                        {
+            foreach(Thetra Y in Figures)
+                if(T != Y) {
+                    for(j = 0; j < 4; j++) {
+                        for(i = 0; i < 4 && Y.p[i] != T.p[j]; i++) ;
+                        if(i != 4) {
                             finded.Add(i);
                             looked.Add(j);
                         }
                     }
-                    if (finded.Count == 3)//перезаписывается лишний раз уже известные стороны
+                    if(finded.Count == 3)//перезаписывается лишний раз уже известные стороны
                     {
                         nY = Figures.IndexOf(Y);
 
