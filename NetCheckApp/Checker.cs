@@ -1,20 +1,11 @@
-﻿using NetCheckerFEM;
+﻿using NetCheckApp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Telma;
-using Telma.BaseGraphic;
-using Telma.ProblemBase;
-using Telma.ViewModels;
-using TelmaQuasar;
-using TelmaQuasar.BasisFunction;
-using TelmaQuasar.Core;
-using TelmaQuasar.FEM;
-using TelmaQuasar.Geometry;
-using TelmaQuasar.Problems;
 
-namespace Core.NetChecker {
+
+namespace NetCheckApp {
     public class TooCloseException : ApplicationException {
     }
 
@@ -27,95 +18,95 @@ namespace Core.NetChecker {
 
     public interface INetChecker {
         bool Load(IMesh3D mesh);
-        bool Load(List<Vector3D> net, List<Thetra> thetras);
+        bool Load(IEnumerable<Vector3D> net, IEnumerable<Thetra> thetras);
         bool Check();
     }
 
-    public class FEMChecker : Checker, INetChecker {
+    //public class FEMChecker : Checker, INetChecker {
 
-        IMesh3D mesh;
-        TaskProperties task;
-        Func<Vector3D, double> u = p => p.X + 2 * p.Y - 2;
-        Func<Vector3D, Vector3D> gradU = p => new Vector3D(1, 2, 0);
-        Func<Vector3D, double> f = p => 0;
-        internal class TestPropertyCollection : IMaterialPropertyCollection {
-            public Dictionary<string, IMaterialProperty> Properties { get; } = new Dictionary<string, IMaterialProperty>();
-            public bool TryGetProperty(string name, out IMaterialProperty property) => Properties.TryGetValue(name, out property);
-        }
-        internal class TestMaterialProperty : IMaterialProperty {
-            public string Name { get; set; }
-            public ICalculator Calculator { get; set; }
-        }
+    //    IMesh3D mesh;
+    //    TaskProperties task;
+    //    Func<Vector3D, double> u = p => p.X + 2 * p.Y - 2;
+    //    Func<Vector3D, Vector3D> gradU = p => new Vector3D(1, 2, 0);
+    //    Func<Vector3D, double> f = p => 0;
+    //    internal class TestPropertyCollection : IMaterialPropertyCollection {
+    //        public Dictionary<string, IMaterialProperty> Properties { get; } = new Dictionary<string, IMaterialProperty>();
+    //        public bool TryGetProperty(string name, out IMaterialProperty property) => Properties.TryGetValue(name, out property);
+    //    }
+    //    internal class TestMaterialProperty : IMaterialProperty {
+    //        public string Name { get; set; }
+    //        public ICalculator Calculator { get; set; }
+    //    }
 
-        public bool Check() {
-            PrepareHeatProblem();
-            //var mesh = CreateMesh(meshparameter, task.MatCat);
-            var PsiBasisType = BasisFunctionTypes.Lagrange;
-            var PsiBasisOrder = 1;
+    //    public bool Check() {
+    //        PrepareHeatProblem();
+    //        //var mesh = CreateMesh(meshparameter, task.MatCat);
+    //        var PsiBasisType = BasisFunctionTypes.Lagrange;
+    //        var PsiBasisOrder = 1;
 
-            foreach(var elem in mesh.Domains.SelectMany(d => d.GeometryElements).Cast<IScalarFemElement>())
-                elem.SetPsiFunctions(PsiBasisType, PsiBasisOrder);
-            foreach(var elem in mesh.Domains.SelectMany(d => d.Boundary().GeometryElements).Cast<IScalarFemElement>())
-                elem.SetPsiFunctions(PsiBasisType, PsiBasisOrder);
+    //        foreach(var elem in mesh.Domains.SelectMany(d => d.GeometryElements).Cast<IScalarFemElement>())
+    //            elem.SetPsiFunctions(PsiBasisType, PsiBasisOrder);
+    //        foreach(var elem in mesh.Domains.SelectMany(d => d.Boundary().GeometryElements).Cast<IScalarFemElement>())
+    //            elem.SetPsiFunctions(PsiBasisType, PsiBasisOrder);
 
-            var problem = new HeatProblem();
+    //        var problem = new HeatProblem();
 
-            var path = Guid.NewGuid().ToString();
-            Directory.CreateDirectory(path);
-            problem.Initialize(mesh, task, path);
+    //        var path = Guid.NewGuid().ToString();
+    //        Directory.CreateDirectory(path);
+    //        problem.Initialize(mesh, task, path);
 
-            problem.Solve();
-            var (l2Error, energyError) = problem.CalculateError(u, gradU);
-            return l2Error < eps;
-        }
+    //        problem.Solve();
+    //        var (l2Error, energyError) = problem.CalculateError(u, gradU);
+    //        return l2Error < eps;
+    //    }
 
-        public bool Load(IMesh3D mesh) {
-            this.mesh = mesh;
-            isLoad = true;
-            return true;
-        }
+    //    public bool Load(IMesh3D mesh) {
+    //        this.mesh = mesh;
+    //        isLoad = true;
+    //        return true;
+    //    }
 
-        private void PrepareHeatProblem() {
-            task = new TaskProperties(true);
-            var m1 = new CatalogManager.SimpleMaterial() {
-                CatNum = 0,
-                Color = Color.BLUE,
-                IsReserved = false,
-                MaterialType = MaterialTypes.Scalar,
-                Name = "material0",
-            };
-            var coefs = new TestPropertyCollection();
-            m1.Coefs = coefs;
-            coefs.Properties.Add("Lambda", new TestMaterialProperty() { Name = "Lambda", Calculator = Calculator.CreateConst("lambda", 2.0) });
-            coefs.Properties.Add("RoCp", new TestMaterialProperty() { Name = "RoCp", Calculator = Calculator.CreateConst("RoCp", 0.0) });
-            coefs.Properties.Add("Velocity", new TestMaterialProperty() { Name = "Velocity", Calculator = Calculator.CreateConst("Velocity", new Vector3D(0, 0, 0)) });
-            coefs.Properties.Add("F", new TestMaterialProperty() { Name = "F", Calculator = Calculator.CreateCoordDep("f", p => 2 * f(p)) });
-            task.MatCat.Add(m1);
-            var bm = new CatalogManager.SimpleBoundary() {
-                CatNum = 10,
-                Color = Color.BLUE,
-                IsReserved = false,
-                ConditionType = BoundaryTypes.DirichletBoundary,
-                Name = "U"
-            };
-            task.BoundCat.Add(bm);
-            coefs = new TestPropertyCollection();
-            bm.Coefs = coefs;
-            coefs.Properties.Add("Ug", new TestMaterialProperty() { Name = "Ug", Calculator = Calculator.CreateCoordDep("U", u) });
+    //    private void PrepareHeatProblem() {
+    //        task = new TaskProperties(true);
+    //        var m1 = new CatalogManager.SimpleMaterial() {
+    //            CatNum = 0,
+    //            Color = Color.BLUE,
+    //            IsReserved = false,
+    //            MaterialType = MaterialTypes.Scalar,
+    //            Name = "material0",
+    //        };
+    //        var coefs = new TestPropertyCollection();
+    //        m1.Coefs = coefs;
+    //        coefs.Properties.Add("Lambda", new TestMaterialProperty() { Name = "Lambda", Calculator = Calculator.CreateConst("lambda", 2.0) });
+    //        coefs.Properties.Add("RoCp", new TestMaterialProperty() { Name = "RoCp", Calculator = Calculator.CreateConst("RoCp", 0.0) });
+    //        coefs.Properties.Add("Velocity", new TestMaterialProperty() { Name = "Velocity", Calculator = Calculator.CreateConst("Velocity", new Vector3D(0, 0, 0)) });
+    //        coefs.Properties.Add("F", new TestMaterialProperty() { Name = "F", Calculator = Calculator.CreateCoordDep("f", p => 2 * f(p)) });
+    //        task.MatCat.Add(m1);
+    //        var bm = new CatalogManager.SimpleBoundary() {
+    //            CatNum = 10,
+    //            Color = Color.BLUE,
+    //            IsReserved = false,
+    //            ConditionType = BoundaryTypes.DirichletBoundary,
+    //            Name = "U"
+    //        };
+    //        task.BoundCat.Add(bm);
+    //        coefs = new TestPropertyCollection();
+    //        bm.Coefs = coefs;
+    //        coefs.Properties.Add("Ug", new TestMaterialProperty() { Name = "Ug", Calculator = Calculator.CreateCoordDep("U", u) });
 
-            bm = new CatalogManager.SimpleBoundary() {
-                CatNum = 11,
-                Color = Color.BLUE,
-                IsReserved = false,
-                ConditionType = BoundaryTypes.NeumannBoundary,
-                Name = "Theta"
-            };
-            task.BoundCat.Add(bm);
-            coefs = new TestPropertyCollection();
-            bm.Coefs = coefs;
-            coefs.Properties.Add("Theta", new TestMaterialProperty() { Name = "Theta", Calculator = Calculator.CreateCoordDep("dU/dn", p => -2 * gradU(p) * Vector3D.XAxis) });
-        }
-    }
+    //        bm = new CatalogManager.SimpleBoundary() {
+    //            CatNum = 11,
+    //            Color = Color.BLUE,
+    //            IsReserved = false,
+    //            ConditionType = BoundaryTypes.NeumannBoundary,
+    //            Name = "Theta"
+    //        };
+    //        task.BoundCat.Add(bm);
+    //        coefs = new TestPropertyCollection();
+    //        bm.Coefs = coefs;
+    //        coefs.Properties.Add("Theta", new TestMaterialProperty() { Name = "Theta", Calculator = Calculator.CreateCoordDep("dU/dn", p => -2 * gradU(p) * Vector3D.XAxis) });
+    //    }
+    //}
 
     public class VolumeChecker : Checker, INetChecker {
         //объем отдельных фигур
@@ -142,7 +133,6 @@ namespace Core.NetChecker {
                 neib = FindNeiborgs(Figures[i]);
                 if(neib == 0) {
                     Console.WriteLine($"WARNING! Standalone figure: #{i}");
-                    ContextManager.Context.Logger.Log(LogLevel.Warning, $"WARNING! Standalone figure: #{i}");
                 }
                 if(neib < 4)
                     OutterThetra.Add(i);
@@ -150,11 +140,9 @@ namespace Core.NetChecker {
                 V = Value(i);
 #if DEBUG
                 Console.WriteLine($"i: {V}");
-                ContextManager.Context.Logger.Log(LogLevel.Debug, $"i: {V}");
 #endif
                 if(V < eps) {
                     Console.WriteLine($"WARNING! Value #{i} less then {eps}");
-                    ContextManager.Context.Logger.Log(LogLevel.Warning, $"i: {V}");
                 } else
                     FiguresValue += V;
             }
@@ -179,11 +167,6 @@ namespace Core.NetChecker {
                     Console.WriteLine($"1 :{tree[side[1]]}");
                     Console.WriteLine($"2 :{tree[side[2]]}");
 
-                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"\r\nThetra#: {numThetra}\r\nNorm: {n}");
-                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"Int: {integral}");
-                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"0 :{tree[side[0]]}");
-                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"1 :{tree[side[1]]}");
-                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"2 :{tree[side[2]]}");
 #endif
                     result += integral;
                 }
@@ -255,7 +238,6 @@ namespace Core.NetChecker {
                 neib = FindNeiborgs(Figures[i]);
                 if(neib == 0) {
                     Console.WriteLine($"WARNING! Standalone figure: #{i}");
-                    ContextManager.Context.Logger.Log(LogLevel.Debug, $"WARNING! Standalone figure: #{i}");
                 }
                 if(neib < 4)
                     OutterThetra.Add(i);
@@ -282,9 +264,6 @@ namespace Core.NetChecker {
             Console.WriteLine($"Tree: {tree.Count}");
             Console.WriteLine($"Dfs: {a}");
             Console.WriteLine($"ThetrasMatch: {b}");
-            ContextManager.Context.Logger.Log(LogLevel.Debug, $"Tree: {tree.Count}");
-            ContextManager.Context.Logger.Log(LogLevel.Debug, $"Dfs: {a}");
-            ContextManager.Context.Logger.Log(LogLevel.Debug, $"ThetrasMatch: {b}");
             return CountOutterVertices() == a && b;
 #else
             return CountOutterVertices() == dfs(FindFirstOutter()) && ThetrasMatch();
@@ -401,14 +380,16 @@ namespace Core.NetChecker {
         public Checker() {
         }
 
-        public bool Load(List<Vector3D> net, List<Thetra> thetras) {
+        public bool Load(IEnumerable<Vector3D> net , IEnumerable<Thetra> thetras) {
             try {
-                Figures = thetras;
-                Vector3D max = net[0], min = net[0];
-                net.ForEach(x => { max = Vector3D.Max(max, x); min = Vector3D.Min(min, x); });
+                Figures = thetras.ToList();
+                Vector3D max = net.ElementAt(0), min = max;
+                foreach(var x in net) {
+                    max = Vector3D.Max(max, x); min = Vector3D.Min(min, x);
+                }
                 tree = new OctoTree(min, max);
                 tree.minDist = dist;
-                net.ForEach(x => tree.AddElement(x));
+                foreach(var x in net) tree.AddElement(x);
                 isLoad = true;
             } catch(Exception) {
                 isLoad = false;

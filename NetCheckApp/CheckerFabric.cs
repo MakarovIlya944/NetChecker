@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.NetChecker {
+namespace NetCheckApp {
     public enum CheckerMode {
         КомпонентыСвязности,
         Объем,
@@ -20,8 +20,8 @@ namespace Core.NetChecker {
                     return new ConnectChecker();
                 case CheckerMode.Объем:
                     return new VolumeChecker();
-                case CheckerMode.МКЭ:
-                    return new FEMChecker();
+                //case CheckerMode.МКЭ:
+                //    return new FEMChecker();
                 default:
                     return new ConnectChecker();
             }

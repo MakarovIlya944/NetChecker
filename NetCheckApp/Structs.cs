@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
-namespace NetCheckApp
-{
+namespace NetCheckApp {
     public interface IGeometryDomain
     {
         bool IsExtern { get; }
@@ -97,7 +97,13 @@ namespace NetCheckApp
         public double Z {
             get;
         }
-
+        public Vector3D(string s) {
+            NumberFormatInfo provider = new NumberFormatInfo();
+            provider.NumberGroupSeparator = ".";
+            X = Convert.ToDouble(s.Split(' ')[0], provider);
+            Y = Convert.ToDouble(s.Split(' ')[1], provider);
+            Z = Convert.ToDouble(s.Split(' ')[2], provider);
+        }
         public Vector3D(double x, double y, double z) {
             X = x;
             Y = y;

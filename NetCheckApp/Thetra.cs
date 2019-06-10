@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Core.NetChecker {
+namespace NetCheckApp {
     /// <summary>
     ///0 1 2 - bot(0)
     ///0 1 3 - right(1)
