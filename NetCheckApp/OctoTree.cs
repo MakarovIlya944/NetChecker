@@ -56,6 +56,8 @@ namespace NetCheckApp {
         public bool tooClose = false;
         private List<int> badPoints;
         private int levels = 0;
+        public Vector3D max { get => root.max; }
+        public Vector3D min { get => root.min; }
         [Flags]
         public enum treeStopFactors { d = 1, c, dc, l, dl, cl, dcl };
         public treeStopFactors checkStop = treeStopFactors.d;
@@ -118,8 +120,25 @@ namespace NetCheckApp {
             }
         }
 
-        private OctoTreeLeaf DeepFind(int v, OctoTreeLeaf curLeaf) {
-            if(curLeaf.isConsist(HostArray[v]))
+        private OctoTreeLeaf DeepFind(Vector3D v, OctoTreeLeaf curLeaf) {
+            if(curLeaf.isConsist(v))
+                if(curLeaf.children == null)
+                    return curLeaf;
+                else
+                    foreach(OctoTreeLeaf el in curLeaf.children) {
+                        OctoTreeLeaf a = DeepFind(v, el);
+                        if(a != null)
+                            return a;
+                    }
+            return null;
+        }
+
+        private OctoTreeLeaf DeepFindClosest(Vector3D v, OctoTreeLeaf curLeaf) {
+            if((curLeaf.max - curLeaf.min) * (v - curLeaf.min) < -minDist) {
+                Console.WriteLine($"Point {v} outside the tree");
+                return null;
+            }
+            if(curLeaf.isConsist(v))
                 if(curLeaf.children == null)
                     return curLeaf;
                 else
@@ -148,8 +167,9 @@ namespace NetCheckApp {
             return null;
         }
 
+
         public HashSet<int> Find(Vector3D v) {
-            return DeepFind(HostArray.IndexOf(v), root).container;
+            return DeepFind(v, root).container;
         }
 
         public List<int> AddElement(Vector3D a) {

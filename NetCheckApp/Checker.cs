@@ -119,13 +119,19 @@ namespace NetCheckApp {
 
         public bool Check() {
             if(isLoad) {
+                VisitedThetra = new bool[Figures.Count];
+                VisitedVertecies = new bool[tree.Count];
+                Point2Thetra = new List<int>[tree.Count];
+                for(int i = 0; i < Point2Thetra.Length; i++)
+                    Point2Thetra[i] = new List<int>();
                 MakeThetra();
                 AllValue();
 #if DEBUG
                 Console.WriteLine($"All: {VolumeValue} FiguresValue: {FiguresValue}");
                 return Math.Abs(VolumeValue - FiguresValue) < eps;
-#endif
+#else
                 return Math.Abs(VolumeValue - FiguresValue) < eps;
+#endif
             } else
                 throw new NetDontExistException("VolumeChecker Error: Сетка не задана");
 
@@ -136,21 +142,30 @@ namespace NetCheckApp {
             //-поиск соседей
             for(int i = 0, neib = 0; i < Figures.Count; i++) {
                 neib = FindNeiborgs(Figures[i]);
+                foreach(int j in Figures[i].p)
+                    Point2Thetra[j].Add(i);
                 if(neib == 0) {
                     Console.WriteLine($"WARNING! Standalone figure: #{i}");
                 }
-                if(neib < 4)
-                    OutterThetra.Add(i);
                 //-проверка объема
                 V = Value(i);
 #if DEBUG
-                Console.WriteLine($"i: {V}");
+                //Console.WriteLine($"i: {V}");
 #endif
                 if(V < eps) {
                     Console.WriteLine($"WARNING! Value #{i} less then {eps}");
                 } else
                     FiguresValue += V;
             }
+            // нахождение внешней границы
+            var closest = tree.Find(tree.max);
+            int firstOutter = closest.ElementAt(0);
+            foreach(int point in closest)
+                if(Vector3D.Distance(tree[firstOutter], tree.max) > Vector3D.Distance(tree[point], tree.max))
+                    firstOutter = point;
+            int count = dfs(Point2Thetra[firstOutter].First(x => Figures[x].near.Any(y => y == -1)));
+            for(int i = 0; i < VisitedThetra.Length; i++)
+                if(VisitedThetra[i]) OutterThetra.Add(i);
         }
 
         private double SurfaceIntegral(int numThetra) {
@@ -268,10 +283,11 @@ namespace NetCheckApp {
 #if DEBUG
             int a = dfs(FindFirstOutter());
             bool b = ThetrasMatch();
+            int c = CountOutterVertices();
             Console.WriteLine($"Tree: {tree.Count}");
             Console.WriteLine($"Dfs: {a}");
             Console.WriteLine($"ThetrasMatch: {b}");
-            return CountOutterVertices() == a && b;
+            return (c == a) && b;
 #else
             return CountOutterVertices() == dfs(FindFirstOutter()) && ThetrasMatch();
 #endif
@@ -302,7 +318,6 @@ namespace NetCheckApp {
                     }
             }
 
-
             isLoad = true;
 
             return true;
@@ -320,7 +335,7 @@ namespace NetCheckApp {
         //малая величина для SurfaceIntegral
         public double eps = 1E-12;
         //минимальная дистанция в дереве
-        public double dist = 1E-1;
+        public double dist = 5E-1;
 
         //октодерево вершин
         protected OctoTree tree;
@@ -446,7 +461,6 @@ namespace NetCheckApp {
 
         //Определяет внешние тетраэдры в которых есть вершина numVert 
         protected List<int> _T(int numVert) {
-            List<int> ans = new List<int>();
             return Point2Thetra[numVert].Where(x => Figures[x].near.Any(y => y == -1)).ToList();
         }
     }
