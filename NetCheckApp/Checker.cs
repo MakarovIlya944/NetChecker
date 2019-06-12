@@ -120,7 +120,12 @@ namespace NetCheckApp {
         public bool Check() {
             if(isLoad) {
                 MakeThetra();
-                return Math.Abs(AllValue() - FiguresValue) < eps;
+                AllValue();
+#if DEBUG
+                Console.WriteLine($"All: {VolumeValue} FiguresValue: {FiguresValue}");
+                return Math.Abs(VolumeValue - FiguresValue) < eps;
+#endif
+                return Math.Abs(VolumeValue - FiguresValue) < eps;
             } else
                 throw new NetDontExistException("VolumeChecker Error: Сетка не задана");
 
@@ -174,12 +179,10 @@ namespace NetCheckApp {
         }
 
         //нахождение общего объема
-        private double AllValue() {
-            double result = 0;
+        private void AllValue() {
+            VolumeValue = 0;
             foreach(int el in OutterThetra)
-                result += SurfaceIntegral(el);
-            VolumeValue = result;
-            return result;
+                VolumeValue += SurfaceIntegral(el);
         }
 
         //нахождение объема одного
@@ -217,15 +220,17 @@ namespace NetCheckApp {
 
     public class ConnectChecker : Checker, INetChecker {
 
-        //для поиска односвязности
-        private bool[] VisitedVertecies;
-        private bool[] VisitedThetra;
 
         public ConnectChecker() {
         }
 
         public bool Check() {
             if(isLoad) {
+                VisitedThetra = new bool[Figures.Count];
+                VisitedVertecies = new bool[tree.Count];
+                Point2Thetra = new List<int>[tree.Count];
+                for(int i = 0; i < Point2Thetra.Length; i++)
+                    Point2Thetra[i] = new List<int>();
                 MakeThetra();
                 return ConnectedСomponent();
             } else
@@ -236,6 +241,8 @@ namespace NetCheckApp {
             //-поиск соседей
             for(int i = 0, neib = 0; i < Figures.Count; i++) {
                 neib = FindNeiborgs(Figures[i]);
+                foreach(int j in Figures[i].p)
+                    Point2Thetra[j].Add(i);
                 if(neib == 0) {
                     Console.WriteLine($"WARNING! Standalone figure: #{i}");
                 }
@@ -280,63 +287,6 @@ namespace NetCheckApp {
             return t == VisitedThetra.Length;
         }
 
-        private int dfs(int u) {
-            int visited = 0;
-            foreach(int a in _1(u)) {
-                if(!VisitedVertecies[a]) {
-                    visited++;
-                    VisitedVertecies[a] = true;
-                    foreach(int b in _T(a)) {
-                        if(b != -1 && !VisitedThetra[b]) {
-                            VisitedThetra[b] = true;
-                            visited += dfs(b);
-                        }
-                    }
-                }
-            }
-            return visited;
-        }
-
-        /// <summary>
-        /// Определяет какие вершины тетраэдра внешние
-        /// </summary>
-        /// <param name="numThetra">Индекс тетраэдра в Figures</param>
-        /// <returns>Все внешние вершины тетраэдра</returns>
-        private IEnumerable<int> _1(int numThetra) {
-            HashSet<int> ans = new HashSet<int>();
-            for(int i = 0; i < 4; i++)
-                if(Figures[numThetra].near[i] == -1) {
-                    ans.Add(Figures[numThetra].p[i / 3]);
-                    ans.Add(Figures[numThetra].p[i / 2 + 1]);
-                    ans.Add(Figures[numThetra].p[(i - 3) / 3 + 3]);
-                }
-            return ans;
-        }
-
-        //Определяет внешние тетраэдры в которых есть вершина numVert 
-        private List<int> _T(int numVert) {
-            List<int> ans = new List<int>();
-            bool V, _1;
-            for(int i = 0, n = Figures.Count; i < n; i++) {
-                V = false;
-                _1 = false;
-                foreach(int a in Figures[i].p)
-                    if(numVert == a) {
-                        V = true;
-                        break;
-                    }
-                foreach(int b in Figures[i].near)
-                    if(-1 == b) {
-                        _1 = true;
-                        break;
-                    }
-                if(_1 && V)
-                    ans.Add(i);
-            }
-            //int i = 0;
-            //foreach(var el in Figures) { if(el.p.Contains(numVert)) ans.Add(i); i++; }
-            return ans;
-        }
 
         public bool Load(IMesh3D mesh) {
 
@@ -352,8 +302,6 @@ namespace NetCheckApp {
                     }
             }
 
-            VisitedThetra = new bool[Figures.Count];
-            VisitedVertecies = new bool[tree.Count];
 
             isLoad = true;
 
@@ -370,12 +318,17 @@ namespace NetCheckApp {
         protected List<int> OutterThetra = new List<int>();
 
         //малая величина для SurfaceIntegral
-        public double eps = 1E-4;
+        public double eps = 1E-12;
         //минимальная дистанция в дереве
         public double dist = 1E-1;
 
         //октодерево вершин
         protected OctoTree tree;
+
+        //для поиска односвязности
+        protected bool[] VisitedVertecies;
+        protected bool[] VisitedThetra;
+        protected List<int>[] Point2Thetra;
 
         public Checker() {
         }
@@ -456,6 +409,45 @@ namespace NetCheckApp {
                     looked.Clear();
                 }
             return countSide;
+        }
+
+        protected int dfs(int u) {
+            int visited = 0;
+            foreach(int a in _1(u)) {
+                if(!VisitedVertecies[a]) {
+                    visited++;
+                    VisitedVertecies[a] = true;
+                    foreach(int b in _T(a)) {
+                        if(b != -1 && !VisitedThetra[b]) {
+                            VisitedThetra[b] = true;
+                            visited += dfs(b);
+                        }
+                    }
+                }
+            }
+            return visited;
+        }
+
+        /// <summary>
+        /// Определяет какие вершины тетраэдра внешние
+        /// </summary>
+        /// <param name="numThetra">Индекс тетраэдра в Figures</param>
+        /// <returns>Все внешние вершины тетраэдра</returns>
+        protected IEnumerable<int> _1(int numThetra) {
+            HashSet<int> ans = new HashSet<int>();
+            for(int i = 0; i < 4; i++)
+                if(Figures[numThetra].near[i] == -1) {
+                    ans.Add(Figures[numThetra].p[i / 3]);
+                    ans.Add(Figures[numThetra].p[i / 2 + 1]);
+                    ans.Add(Figures[numThetra].p[(i - 3) / 3 + 3]);
+                }
+            return ans;
+        }
+
+        //Определяет внешние тетраэдры в которых есть вершина numVert 
+        protected List<int> _T(int numVert) {
+            List<int> ans = new List<int>();
+            return Point2Thetra[numVert].Where(x => Figures[x].near.Any(y => y == -1)).ToList();
         }
     }
 }

@@ -13,12 +13,12 @@ namespace NetCheckApp {
 
         public (Thetra[], Vector3D[]) Read() {
 
-            Thetra[] resultThetras;
+            Thetra[] resultThetras = new Thetra[1];
             Vector3D[] resultVectors; 
             string cur;
             string[] curNumbers;
             int numEntityBlocks, numNodes, numElements;
-            int[] mesh = new int[4];
+            int[] mesh = new int[5];
             using(var file = new StreamReader(path)) {
                 cur = file.ReadLine();
 
@@ -47,7 +47,6 @@ namespace NetCheckApp {
                 numEntityBlocks = Int32.Parse(curNumbers[0]);
                 numElements = Int32.Parse(curNumbers[1]);
 
-                resultThetras = new Thetra[numElements];
 
                 for(int i = 0, ind = 0; i < numEntityBlocks; i++) {
                     cur = file.ReadLine();
@@ -57,11 +56,12 @@ namespace NetCheckApp {
                         continue;
                     }
                     numNodes = Int32.Parse(curNumbers[3]);
+                    resultThetras = new Thetra[numNodes];
                     for(int j = 0; j < numNodes; j++) {
                         curNumbers = file.ReadLine().Split(" ");
-                        for(int k = 0; k < 3; k++)
+                        for(int k = 0; k < 4; k++)
                             mesh[k] = Int32.Parse(curNumbers[k+1]) - 1;
-                        mesh[3] = 0;
+                        mesh[4] = 0;
                         resultThetras[ind++] = new Thetra(mesh);
                     }
                 }
